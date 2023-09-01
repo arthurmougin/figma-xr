@@ -1,0 +1,60 @@
+@import "@material/button/dist/mdc.button.css";
+@import "@material/card/dist/mdc.card.css";
+@import "@material/checkbox/dist/mdc.checkbox.css";
+@import "@material/chips/dist/mdc.chips.css";
+@import "@material/dialog/dist/mdc.dialog.css";
+@import "@material/drawer/dist/mdc.drawer.css";
+@import "@material/elevation/dist/mdc.elevation.css";
+@import "@material/fab/dist/mdc.fab.css";
+@import "@material/form-field/dist/mdc.form-field.css";
+@import "@material/icon-button/dist/mdc.icon-button.css";
+@import "@material/line-ripple/dist/mdc.line-ripple.css";
+@import "@material/linear-progress/dist/mdc.linear-progress.css";
+@import "@material/list/dist/mdc.list.css";
+@import "@material/menu/dist/mdc.menu.css";
+@import "@material/radio/dist/mdc.radio.css";
+@import "@material/ripple/dist/mdc.ripple.css";
+@import "@material/select/dist/mdc.select.css";
+@import "@material/slider/dist/mdc.slider.css";
+@import "@material/snackbar/dist/mdc.snackbar.css";
+@import "@material/switch/dist/mdc.switch.css";
+@import "@material/tab-bar/dist/mdc.tab-bar.css";
+@import "@material/tab/dist/mdc.tab.css";
+@import "@material/textfield/dist/mdc.textfield.css";
+@import "@material/theme/dist/mdc.theme.css";
+@import "@material/top-app-bar/dist/mdc.top-app-bar.css";
+@import "@material/typography/dist/mdc.typography.css";
+@import "@material/layout-grid/dist/mdc.layout-grid.css";
+@import "@material/data-table/dist/mdc.data-table.css";
+@import "@material/notched-outline/dist/mdc.notched-outline.css";
+@import "@material/banner/dist/mdc.banner.css";
+@import "@material/circular-progress/dist/mdc.circular-progress.css";
+@import "@material/floating-label/dist/mdc.floating-label.css";
+@import "@material/icon-button/dist/mdc.icon-button.css";
+@import "@material/segmented-button/dist/mdc.segmented-button.css";
+@import "@material/tab-indicator/dist/mdc.tab-indicator.css";
+@import "@material/tab-scroller/dist/mdc.tab-scroller.css";
+@import "@material/tooltip/dist/mdc.tooltip.css";
+
+/* reset css without import */
+html {
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Roboto", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(0, 0, 0, 0.87);
+  background-color: #fff;
+  min-height: 100vh;
+  box-sizing: border-box;
+}

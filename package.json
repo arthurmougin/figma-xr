@@ -1,0 +1,28 @@
+{
+  "name": "figma-xr",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "serveo": "ssh -R 80:localhost:5173 serveo.net"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^6.16.0",
+    "@babylonjs/gui": "^6.18.0",
+    "@babylonjs/inspector": "^6.16.0",
+    "@babylonjs/loaders": "^6.16.0",
+    "vue": "^3.3.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.6",
+    "@vitejs/plugin-vue": "^4.2.3",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5",
+    "vite-plugin-mkcert": "^1.16.0",
+    "vue-material-adapter": "^6.2.0",
+    "vue-tsc": "^1.8.5"
+  }
+}
