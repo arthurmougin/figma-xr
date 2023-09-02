@@ -74,8 +74,8 @@ refreshOnLoad()
 				</section>
 				<mcw-card-actions>
 					<mcw-card-action-buttons>
-						<mcw-button @click="openProject(project)">Open</mcw-button>
-						<mcw-button @click="removeProject(project.id)">Delete </mcw-button>
+						<mcw-button raised @click="openProject(project)">Open</mcw-button>
+						<mcw-button outlined @click="removeProject(project.id)">Delete </mcw-button>
 					</mcw-card-action-buttons>
 				</mcw-card-actions>
 			</mcw-card>
@@ -107,5 +107,8 @@ refreshOnLoad()
 	}
 	li {
 		margin: 1em;
+	}
+	.mdc-card__action-buttons > *:first-child {
+		margin-right: 0.5em;
 	}
 </style>

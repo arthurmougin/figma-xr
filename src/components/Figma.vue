@@ -131,7 +131,6 @@ init()
 	button {
 		background: none;
 		border: none;
-		color: white;
 	}
 
 

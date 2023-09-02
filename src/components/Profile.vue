@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import {logStateOptions,ProfileType} from "../definition.d";
 defineProps<{
   logState:logStateOptions,
@@ -27,6 +26,7 @@ defineProps<{
 		flex-wrap: wrap;
 		align-content: center;
 		justify-content: flex-end;
+		color:var(--text)
 	}
 	div * {
 		margin: 0 0.5em;

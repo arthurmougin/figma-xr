@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import {onMounted, ref, toRaw, toValue} from 'vue'
+import {onMounted, ref, toRaw } from 'vue'
 import myScene from "../scenes/MyFirstScene.ts";
 
 const props = defineProps<{

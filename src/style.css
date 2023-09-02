@@ -1,3 +1,5 @@
+
+
 @import "@material/button/dist/mdc.button.css";
 @import "@material/card/dist/mdc.card.css";
 @import "@material/checkbox/dist/mdc.checkbox.css";
@@ -37,8 +39,35 @@
 @import "@material/tooltip/dist/mdc.tooltip.css";
 
 /* reset css without import */
-html {
+html, :root {
   box-sizing: border-box;
+  --text: #141d02;
+  color:var(--text);
+  --mdc-theme-text-primary: #141d02;
+  --mdc-theme-text-secondary: #141d02;
+  --mdc-theme-one-primary: #141d02;
+  --mdc-theme-one-secondary: #141d02;
+  --mdc-theme-one-text-primary-on-background: #141d02;
+  --mdc-theme-one-text-secondary-on-background: #141d02;
+  --mdc-theme-one-text-hint-on-background: #141d02;
+  --mdc-theme-one-text-disabled-on-background: #141d02;
+  --mdc-theme-one-text-icon-on-background: #141d02;
+  --mdc-theme-one-text-primary-on-light: #141d02;
+  --mdc-theme-one-text-secondary-on-light: #141d02;
+  --mdc-theme-one-text-hint-on-light: #141d02;
+  --mdc-theme-one-text-disabled-on-light: #141d02;
+  --mdc-theme-one-text-icon-on-light: #141d02;
+  --background: #ffffff;
+  --mdc-theme-background: #ffffff;
+  --primary: #79ecec;
+  --mdc-theme-primary: #79ecec;
+  --mdc-theme-on-primary: #141d02;
+  --secondary: #f4cafc;
+  --mdc-theme-secondary: #f4cafc;
+  --mdc-theme-on-secondary: #141d02;
+  --accent: #0e33ec;
+  --mdc-theme-accent: #0e33ec;
+  --mdc-theme-on-accent: #141d02;
 }
 
 *,
@@ -53,8 +82,12 @@ body {
   font-family: "Roboto", sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  color: rgba(0, 0, 0, 0.87);
-  background-color: #fff;
+  color:var(--text);
+  background-color: var(--background);
   min-height: 100vh;
   box-sizing: border-box;
+}
+
+.mdc-button__label {
+  color:var(--text);
 }
