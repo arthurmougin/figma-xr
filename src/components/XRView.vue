@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import {onMounted, ref, toRaw } from 'vue'
-import myScene from "../scenes/MyFirstScene.ts";
+import myScene from "../babylon/scenes/scene.ts";
 
 const props = defineProps<{
 	currentProject: any

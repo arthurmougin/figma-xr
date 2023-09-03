@@ -1,6 +1,6 @@
 import * as BABYLON from "@babylonjs/core";
 import {AdvancedDynamicTexture, Container, Control, Image} from "@babylonjs/gui/2D";
-import {root} from "../assets/gui/gui-main.json";
+import {root} from "../gui/gui-main.json";
 
 // create button type that extends Control and add frame as property
 class ButtonFrame extends Control {

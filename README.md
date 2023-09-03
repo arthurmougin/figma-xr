@@ -1,18 +1,42 @@
-# Vue 3 + TypeScript + Vite
+//write a new readme in markdown about the current setup :  Babylonjs Vue3 material typescript vite github pages
+//The goal is to make a WebAR figma design tool that allow someone to place in AR different planes from a figma project
+//The real goal is to show off my skills and get a mission as a freelancer
+//The project name is figma-xr and the github repo is figma-xr. The github pages is arthur-mougin.github.io/figma-xr
+// make the readme cool, detailed and professionnal with links to appropriate docs and tutorials
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+# Figma XR
 
-## Recommended IDE Setup
+## Description
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+This project is a hobby WebAR figma design tool that allow someone to place in AR different planes from a figma project.
+It works on laptop, smartphone, and even in AR with such smartphone.
 
-## Type Support For `.vue` Imports in TS
+## Technologies
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+- [Babylonjs](https://doc.babylonjs.com/) 
+- [Vue3](https://v3.vuejs.org/)
+- [Typescript](https://www.typescriptlang.org/)
+- [Vite](https://vitejs.dev/)
+- [Github pages](https://pages.github.com/)
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+## Installation
 
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+```bash
+npm install
+```
+
+## Usage
+
+```bash
+npm run dev
+```
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
+
+
