@@ -479,7 +479,7 @@
                             "populateNinePatchSlicesFromImage": false,
                             "autoScale": false,
                             "stretch": 2,
-                            "source": "https://assets.babylonjs.com/textures/Checker_albedo.png",
+                            "source": "",
                             "cellWidth": 0,
                             "cellHeight": 0,
                             "cellId": -1,

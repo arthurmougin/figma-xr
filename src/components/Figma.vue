@@ -4,6 +4,7 @@ import {logStateOptions, ProfileType} from "../definition.d";
 import Projects from "./Projects.vue";
 import XRView from "./XRView.vue";
 import Profile from "./Profile.vue";
+import LandingPage from "./LandingPage.vue";
 
 const logState = ref(logStateOptions['not logged in'])
 const currentUrl = new URL(window.location.href);
@@ -102,35 +103,26 @@ init()
 			v-else-if="logState == logStateOptions['logged in'] && currentProject != null"
 			:currentProject="currentProject"
 		/>
-		<div v-else>
-			<ol>
-				<li>Login to Figma to get Started</li>
-				<li>Add your projects by grabbing their url</li>
-				<li>Open the project of your choice in XR</li>
-				<li>Enjoy!</li>
-			</ol>
-
-		</div>
+		<LandingPage v-else/>
+			
 	</main>
 </template>
 
 <style scoped>
 	.mdc-top-app-bar.mdc-top-app-bar--fixed {
-		grid-area: header;
 		flex-direction: row;
 		align-items: center;
-		position: relative;
 		padding: 0 1em;
 		top: 0;
-	}
-	main {
-		grid-area: main;
-		overflow: hidden;
 	}
 
 	button {
 		background: none;
 		border: none;
+	}
+
+	main {
+		margin-top: 6em;
 	}
 
 

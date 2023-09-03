@@ -95,11 +95,8 @@ const myScene = {
         const camera = scene.activeCamera as BABYLON.Camera;
         const camChild = camera.getChildren()[0] as MeshFrame;
         camChild.setParent(null);
-        //not in xr
         if (webXRDefaultExperience.baseExperience.state === BABYLON.WebXRState.IN_XR) {
             try {
-                console.log("adding anchor")
-                console.log(camChild.position,camChild.rotationQuaternion)
                 const anchor = await webXRAnchorSystem.addAnchorAtPositionAndRotationAsync(
                     camChild.position,
                     camChild.rotationQuaternion ?
@@ -109,7 +106,7 @@ const myScene = {
                 anchor.attachedNode = camChild;
             }
             catch (e) {
-                console.log(e);
+                console.warn(e);
             }
         }
     },
@@ -117,6 +114,7 @@ const myScene = {
         await xrPolyfillPromise
         var engine = new BABYLON.Engine(canvas);
         var scene = new BABYLON.Scene(engine);
+    
         this.Engine = engine;
         this.Scene = scene;
 
@@ -124,19 +122,27 @@ const myScene = {
         this.Spawn = this.Spawn.bind(this);
 
         // This creates and positions a free camera (non-mesh)
-        var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+        var camera = new BABYLON.DeviceOrientationCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
 
         // This targets the camera to scene origin
         camera.setTarget(BABYLON.Vector3.Zero());
 
         // This attaches the camera to the canvas
         camera.attachControl(canvas, true);
+        camera.speed = 0.1;
 
         // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
         var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
         // Default intensity is 1. Let's dim the light a small amount
-        light.intensity = 0.7;
+        light.intensity = 0.9;
+
+        const environment = scene.createDefaultEnvironment({
+            skyboxSize: 100,
+        });
+        if (environment) {
+            environment.setMainColor(BABYLON.Color3.FromHexString("#79ecec"));
+        }
 
         engine.runRenderLoop(() => {
             scene.render();

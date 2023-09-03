@@ -58,7 +58,10 @@ fetchAllFigmaNodeFromProject()
 </script>
 
 <template>
-	<canvas ref="bjsCanvas" :width="canvasSize.width" :height="canvasSize.height"/>
+	<div class="bjs-canvas-container">
+		<canvas ref="bjsCanvas" :width="canvasSize.width" :height="canvasSize.height"/>
+	</div>
+	
 </template>
 
 <style scoped>
@@ -66,4 +69,15 @@ fetchAllFigmaNodeFromProject()
 		width: 100%;
 		height: 100%;
 	}
+
+	.bjs-canvas-container {
+		width: 100%;
+		max-width: 70em;
+		height: 75vh;
+		max-height: 50em;
+		margin: auto;
+		box-sizing: content-box;
+		box-shadow: 0px 0px 10px #0000005c;
+	}
+	
 </style>
