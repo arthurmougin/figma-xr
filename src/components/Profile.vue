@@ -13,7 +13,7 @@ defineProps<{
 	<div>
 	    <img v-if="logState == logStateOptions['logged in']" v-bind:src="profile?.img_url">
 	    <p v-if="profile?.handle">{{profile?.handle}}</p>
-	    <mcw-button raised v-if="logState != logStateOptions['logged in']" @click="login">Login</mcw-button>
+	    <mcw-button id="login" raised v-if="logState != logStateOptions['logged in']" @click="login">Login</mcw-button>
 	    <mcw-button raised v-if="logState == logStateOptions['logged in']" @click="logout">Logout</mcw-button>
 	</div>
 </template>
@@ -35,5 +35,10 @@ defineProps<{
 		width: 3em;
 		height: 3em;
 		border-radius: 3px;
+	}
+
+	#login {
+		background-color: var(--mdc-theme-secondary);
+		color: white;
 	}
 </style>

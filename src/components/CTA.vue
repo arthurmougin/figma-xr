@@ -1,12 +1,14 @@
 <script setup lang="ts">
-
+defineProps<{
+  login:()=>void
+}>()
 </script>
 
 <template>
         <div>
-            <mcw-button raised>Try Figma-xr Now</mcw-button>
+            <mcw-button id="test" raised @click="login">Try Figma-xr Now</mcw-button>
             <p>or</p>
-            <mcw-button raised>Hire Me</mcw-button>
+            <a href="https://www.linkedin.com/in/arthur-mougin/"><mcw-button id="hire" raised>Get in touch</mcw-button></a>
         </div>
 </template>    
 
@@ -21,5 +23,14 @@
 
     p {
         padding: 1rem;
+    }
+
+    #test {
+        background-color: var(--mdc-theme-secondary);
+    }
+
+    #hire {
+        background-color: var(--mdc-theme-accent);
+        --text : white;
     }
 </style>

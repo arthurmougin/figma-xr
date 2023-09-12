@@ -1,15 +1,16 @@
 <script lang="ts" setup>
 import {ref} from 'vue'
 import {logStateOptions, ProfileType} from "../definition.d";
-import Projects from "./Projects.vue";
-import XRView from "./XRView.vue";
 import Profile from "./Profile.vue";
-import LandingPage from "./LandingPage.vue";
+import {isLoggedIn} from "../utils";
+import { useRoute, useRouter } from 'vue-router'
 
 const logState = ref(logStateOptions['not logged in'])
 const currentUrl = new URL(window.location.href);
 const profileData = ref<ProfileType | null>(null)
 const currentProject = ref<any|null>(null)
+const route = useRoute()
+const router = useRouter()
 
 function login() {
 	const state = Math.random().toString(36).substring(7);
@@ -29,34 +30,18 @@ function logout() {
 	window.location.replace(currentUrl.toString())
 }
 
-function isLoggedIn() {
-	const access_token = localStorage.getItem('access_token')
-	const expires_in = localStorage.getItem('expires_in')
-	if (access_token === null || expires_in === null) {
-		return false
-	}
-	if (Date.now() > parseInt(expires_in)) {
-		return false
-	}
-	return true
-}
-
-async function fetchProfile() {
-	const headers = new Headers({
-		'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
-	})
-	const data = await fetch('https://api.figma.com/v1/me', {
-		method: 'get',
-		headers
-	})
-	const json = await data.json();
-	profileData.value = json;
-}
-
 async function init() {
 	if (isLoggedIn()) {
 		logState.value = logStateOptions['logged in']
-		fetchProfile()
+		const headers = new Headers({
+			'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+		})
+		const data = await fetch('https://api.figma.com/v1/me', {
+			method: 'get',
+			headers
+		})
+		const json = await data.json();
+		profileData.value = json;
 	} else if (currentUrl.searchParams.has('callback')) {
 		if (currentUrl.searchParams.get('state') == localStorage.getItem('figmaState')) {
 			logState.value = logStateOptions['logging in']
@@ -69,24 +54,20 @@ async function init() {
 			localStorage.setItem('expires_in', ((parseInt(json.expires_in) * 24 * 60 * 60) + Date.now()).toString())
 			localStorage.setItem('refresh_token', json.refresh_token)
 
-			currentUrl.searchParams.delete('callback')
-			currentUrl.searchParams.delete('code')
-			currentUrl.searchParams.delete('state')
-			window.location.replace(currentUrl.toString())
+			router.push('/projects');
 		} else {
 			console.error('state mismatch')
 			logState.value = logStateOptions['error']
 		}
 	}
 }
-
 init()
 
 </script>
 
 <template>
 	<mcw-top-app-bar class="mdc-top-app-bar--fixed">
-		<button @click="currentProject = null"><h1>Figma XR {{ currentProject ? ` | ${currentProject.name}`:''}}</h1></button>
+		<router-link to="/projects"><h1>Figma XR {{ currentProject ? ` | ${currentProject.name}`:''}}</h1></router-link>
 		<Profile
 			:logState="logState"
 			:login="login"
@@ -95,16 +76,7 @@ init()
 		/>
 	</mcw-top-app-bar>
 	<main>
-		<Projects
-			v-if="logState == logStateOptions['logged in'] && currentProject == null"
-			:open-project="(data:any)=> { currentProject = data; }"
-			:profile="profileData" />
-		<XRView
-			v-else-if="logState == logStateOptions['logged in'] && currentProject != null"
-			:currentProject="currentProject"
-		/>
-		<LandingPage v-else/>
-			
+		<router-view></router-view>
 	</main>
 </template>
 
@@ -114,11 +86,6 @@ init()
 		align-items: center;
 		padding: 0 1em;
 		top: 0;
-	}
-
-	button {
-		background: none;
-		border: none;
 	}
 
 	main {

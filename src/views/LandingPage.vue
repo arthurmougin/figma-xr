@@ -1,23 +1,26 @@
 <script setup lang="ts">
-    import CTA from './CTA.vue';
+    import CTA from '../components/CTA.vue';
+    defineProps<{
+        login:()=>void
+    }>()
 </script>
 
 <template>
     <article id="main">
         <h1>Figma-xr: Elevate Your Design Prototyping into the XR Realm</h1>
-        <CTA></CTA> 
+        <CTA :login="login"></CTA> 
     </article>
     <article id="description">
         <h2>What is Figma-xr?</h2>
         <p>Figma-xr is an open-source tool that seamlessly integrates Figma with XR, enabling immersive UI prototyping like never before.</p>
-        <p>It is currently in beta.</p>
+        <p>This is a POC. So features can quickly evolve based on feedback.</p>
     </article>
     <article id="features">
         <h2>Features/Benefits</h2>
         <ul>
             <li>Open Source: Built on Vite, Vue3, Typescript, Babylonjs.</li>
             <li>Seamless Integration: Figma API and Github Pages support.</li>
-            <li>Immersive Prototyping: Place Figma panels flat or in XR using WebXR on any device.</li>
+            <li>Immersive Prototyping: Place Figma panels anywhere.</li>
         </ul>
     </article>
     <article id="how">
@@ -30,7 +33,7 @@
         </ol>
     </article>
     <footer>
-        <CTA></CTA>
+        <CTA :login="login"></CTA> 
 
         //Connect on social media
         <div>
@@ -48,6 +51,26 @@
 <style scoped>
     article {
         padding: 4em 2rem;
+    }
+
+    article:not(:first-child) > * {
+        max-width: 500px;
+    }
+
+    article:not(:first-child):nth-child(2n +1) {
+        text-align: end;
+        /* right: 0; */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    li {
+        margin: 1rem 0;
+    }
+
+    article h2 {
+        color:var(--accent)
     }
 
     footer {

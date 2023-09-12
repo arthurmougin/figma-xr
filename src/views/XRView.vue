@@ -1,14 +1,15 @@
 <script lang="ts" setup>
-import {onMounted, ref, toRaw } from 'vue'
+import {onMounted, ref, toRaw } from 'vue';
 import myScene from "../babylon/scenes/scene.ts";
+import {useRoute} from "vue-router";
 
-const props = defineProps<{
-	currentProject: any
-}>();
-
+const route = useRoute()
 const bjsCanvas = ref<HTMLCanvasElement|null>(null);
 const canvasSize = ref({width: 200, height: 200})
-const frames = ref(props.currentProject.document.children[0].children as any[]);
+const projects = localStorage.getItem("projects") ? JSON.parse(localStorage.getItem("projects") as string) : [];
+const project = projects.find((project: any) => project.id == route.params.projectId)
+console.log(project)
+const frames = ref(project.document.children[0].children as any[]);
 myScene.setFrames(frames.value)
 
 
@@ -28,7 +29,7 @@ async function fetchAllFigmaNodeFromProject() {
 		ids += frame.id + ','
 	})
 	ids = ids.slice(0, -1);
-	const data = await fetch(`https://api.figma.com/v1/images/${props.currentProject.id}?ids=${ids}&format=png&scale=1`, {
+	const data = await fetch(`https://api.figma.com/v1/images/${project.id}?ids=${ids}&format=png&scale=1`, {
 		method: 'get',
 		headers,
 	})
