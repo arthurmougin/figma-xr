@@ -21,10 +21,10 @@
     "noFallthroughCasesInSwitch": true,
 
     "types": [
-      "babylonjs",
-      "babylonjs-gui",
-      "babylonjs-materials"
-    ],
+      "@babylonjs/core",
+      "@babylonjs/gui",
+      "@babylonjs/materials"
+    ]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
   "references": [{ "path": "./tsconfig.node.json" }]

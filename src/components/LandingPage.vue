@@ -1,20 +1,18 @@
 <script setup lang="ts">
-
+    import CTA from './CTA.vue';
 </script>
 
 <template>
-    <article>
+    <article id="main">
         <h1>Figma-xr: Elevate Your Design Prototyping into the XR Realm</h1>
-        <mcw-button>Try Figma-xr Now</mcw-button>
-        <p>or</p>
-        <mcw-button>Collaborate with Me</mcw-button>
+        <CTA></CTA> 
     </article>
-    <article>
+    <article id="description">
         <h2>What is Figma-xr?</h2>
         <p>Figma-xr is an open-source tool that seamlessly integrates Figma with XR, enabling immersive UI prototyping like never before.</p>
         <p>It is currently in beta.</p>
     </article>
-    <article>
+    <article id="features">
         <h2>Features/Benefits</h2>
         <ul>
             <li>Open Source: Built on Vite, Vue3, Typescript, Babylonjs.</li>
@@ -22,7 +20,7 @@
             <li>Immersive Prototyping: Place Figma panels flat or in XR using WebXR on any device.</li>
         </ul>
     </article>
-    <article>
+    <article id="how">
         <h2>How to Use</h2>
         <ol>
             <li>Connect to Figma</li>
@@ -32,9 +30,7 @@
         </ol>
     </article>
     <footer>
-        <mcw-button>Try Figma-xr Now</mcw-button>
-        <p>or</p>
-        <mcw-button>Collaborate with Me</mcw-button>
+        <CTA></CTA>
 
         //Connect on social media
         <div>
@@ -47,9 +43,28 @@
         </div>
 
     </footer>
-
-
 </template>
 
 <style scoped>
+    article {
+        padding: 4em 2rem;
+    }
+
+    footer {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background : var(--mdc-theme-on-primary);
+        color: white;
+    }
+
+    footer div {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    footer div a {
+        margin: 0 0.5rem;
+    }
 </style>
