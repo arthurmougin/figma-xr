@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "serveo": "ssh -R 80:localhost:5173 serveo.net"
+    "serveo": "ssh -R 80:localhost:5173 serveo.net",
+    "adb_connect" : "adb reverse tcp:5173 tcp:5173"
   },
   "dependencies": {
     "@babylonjs/core": "^6.16.0",

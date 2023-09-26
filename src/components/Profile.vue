@@ -11,7 +11,6 @@ const router = useRouter()
 const route = useRoute()
 
 async function getProfile (){
-	console.log("getting profile")
 	const headers = new Headers({
 		'Authorization': `Bearer ${await localForage.getItem('access_token') || ''}`
 	})
@@ -37,7 +36,6 @@ async function getProfile (){
 
 watch (logState, async (newVal) => {
 	if (newVal == logStateOptions['logged in']) {
-		console.log("logged in, getting profile")
 		await getProfile()
 	} else {
 		profile.value = null
@@ -46,7 +44,6 @@ watch (logState, async (newVal) => {
 
 
 watch (route, async e=> {
-	console.log("route changed", e)
 	if (await isLoggedIn()) {
 		logState.value = logStateOptions['logged in']
 	}
@@ -62,7 +59,6 @@ function locLogOut() {
 }
 
 if (logState.value === logStateOptions['logged in']) {
-	console.log("logged in, getting profile")
 	getProfile()
 }
 

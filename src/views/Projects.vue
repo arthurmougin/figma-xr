@@ -142,4 +142,11 @@
 	#add > * {
 		margin: 0.5em;
 	}
+
+	.mdc-button--outlined {
+		padding: 0.5em;
+		position: relative;
+		box-sizing: content-box;
+	}
+
 </style>

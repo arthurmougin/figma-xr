@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-	import {onMounted, ref, toRaw } from 'vue';
+	import {onMounted, ref, toRaw, watch } from 'vue';
 	import myScene from "../babylon/scenes/scene.ts";
-	import {getProject} from "../utils";
+	import {getProject, isMobile} from "../utils";
 	import localForage from 'localforage';
 	const props = defineProps<{ 
 		projectId: string 
@@ -9,16 +9,20 @@
 
 	const bjsCanvas = ref<HTMLCanvasElement|null>(null);
 	const canvasSize = ref({width: 200, height: 200})
-	const project: any = getProject(props.projectId);
-	console.log(project)
-	const frames = ref(project.document.children[0].children as any[]);
-	myScene.setFrames(toRaw(frames.value))
+	const project = ref({} as any);
+	const frames = ref([] as any[]);
+
+	watch( project,(project:any) => {
+		frames.value = project.document.children[0].children as any[]
+		fetchAllFigmaNodeFromProject()
+	})
 
 
 	onMounted(async () => {
 		if (bjsCanvas.value) {
 			await myScene.createScene(bjsCanvas.value);
 			updateSize()
+			
 		}
 	});
 
@@ -31,7 +35,7 @@
 			ids += frame.id + ','
 		})
 		ids = ids.slice(0, -1);
-		const data = await fetch(`https://api.figma.com/v1/images/${project.id}?ids=${ids}&format=png&scale=1`, {
+		const data = await fetch(`https://api.figma.com/v1/images/${project.value.id}?ids=${ids}&format=png&scale=1`, {
 			method: 'get',
 			headers,
 		})
@@ -47,22 +51,29 @@
 	}
 
 	async function updateSize(){
+		console.log("resize")
 		//get bjsCanvas parent size
 		const parent = bjsCanvas.value?.parentElement
 		if (parent) {
 			canvasSize.value.width = parent.clientWidth
 			canvasSize.value.height = parent.clientHeight-1
+			console.log(canvasSize.value)
 		}
-		myScene?.Engine?.resize()
+		myScene?.Engine?.resize(true)
 	}
 
 	window.addEventListener('resize', updateSize)
-	fetchAllFigmaNodeFromProject()
+	async function init () {
+		const tmpProject = await getProject(props.projectId)
+		if (tmpProject)
+			project.value = tmpProject;
+	}
+	init()
 </script>
 
 <template>
 	<div class="bjs-canvas-container">
-		<canvas ref="bjsCanvas" :width="canvasSize.width" :height="canvasSize.height"/>
+		<canvas ref="bjsCanvas" :width="canvasSize.width * 2" :height="canvasSize.height * 2"/>
 	</div>
 </template>
 

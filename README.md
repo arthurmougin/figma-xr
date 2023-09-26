@@ -5,6 +5,8 @@
 This project is a hobby WebAR figma design tool that allow someone to place in AR different planes from a figma project.
 It works on laptop, smartphone, and even in AR with such smartphone.
 
+//chrome://inspect/#devices for debugging on smartphone
+
 ## Technologies
 
 - [Babylonjs](https://doc.babylonjs.com/) 

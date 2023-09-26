@@ -27,4 +27,8 @@ h1#title {
   font-size: 2em;
   color: var(--accent);
 }
+
+main {
+  margin-top: 1em;
+}
 </style>

@@ -1,6 +1,7 @@
 import * as BABYLON from "@babylonjs/core";
 import {AdvancedDynamicTexture, Container, Control, Image} from "@babylonjs/gui/2D";
 import {root} from "../gui/gui-main.json";
+import {isMobile} from "../../utils";
 
 // create button type that extends Control and add frame as property
 class ButtonFrame extends Control {
@@ -112,8 +113,9 @@ const myScene = {
     },
     async createScene (canvas:HTMLCanvasElement) {
         await xrPolyfillPromise;
-        var engine = new BABYLON.Engine(canvas);
+        var engine = new BABYLON.Engine(canvas, true, undefined, true);
         var scene = new BABYLON.Scene(engine);
+        console.log(engine,scene, canvas)
     
         this.Engine = engine;
         this.Scene = scene;
@@ -156,6 +158,9 @@ const myScene = {
         this.UI = advancedTexture;
         advancedTexture.parseSerializedObject({root});
         advancedTexture.renderScale = 2;
+        if(isMobile()) {
+            advancedTexture.renderScale = 1;
+        }
 
         const webXRDefaultExperience = await scene.createDefaultXRExperienceAsync({
             uiOptions: {
@@ -174,6 +179,40 @@ const myScene = {
         const featuresManager = webXRDefaultExperience.baseExperience.featuresManager;
         const webXRAnchorSystem : BABYLON.WebXRAnchorSystem = featuresManager.enableFeature( BABYLON.WebXRAnchorSystem, 'latest') as BABYLON.WebXRAnchorSystem;
         this.webXRAnchorSystem = webXRAnchorSystem;
+
+
+        webXRDefaultExperience.baseExperience.onStateChangedObservable.add((state) => {
+            //let camera1, xrCamera, camChild;
+            switch (state) {
+                case BABYLON.WebXRState.IN_XR:
+                    // XR is initialized and already submitted one frame
+                    console.log("in xr")
+                    break;
+                case BABYLON.WebXRState.ENTERING_XR:
+                    // xr is being initialized, enter XR request was made
+                    console.log("entering xr")
+                    //move gui and children of free camera to xr camera
+                    //camera1 = scene.getCameraByName("camera1") as BABYLON.Camera;
+                    //xrCamera = webXRDefaultExperience.baseExperience.camera;
+                    //camChild = camera.getChildren()[0] as MeshFrame;
+                    //camChild.setParent(xrCamera);
+                    break;
+                case BABYLON.WebXRState.EXITING_XR:
+                    // xr exit request was made. not yet done.
+                    console.log("exiting xr")
+                    //move gui and children of xr camera to free camera called camera1
+                    //camera1 = scene.getCameraByName("camera1") as BABYLON.Camera;
+                    //xrCamera = webXRDefaultExperience.baseExperience.camera;
+                    //camChild = xrCamera.getChildren()[0] as MeshFrame;
+                    //camChild.setParent(camera1);
+
+                    break;
+                case BABYLON.WebXRState.NOT_IN_XR:
+                    // self explanatory - either out or not yet in XR
+                    console.log("not in xr")
+                    break;
+            }
+        })
         return scene;
     },
     async setFrames (frames:any[]) {
@@ -194,9 +233,12 @@ const myScene = {
             //first time loading
             buttonTemplate.isVisible = false;
             frames.forEach((frame: any) => {
+                console.log(frame.image)
                 const button = buttonTemplate.clone() as ButtonFrame;
                 button.isVisible = true;
-                const image = button.getDescendants()[0] as Image;
+                const image = button.getDescendants()[1] as Image;
+                console.log(button)
+                console.log(image)
                 image.source = frame.image;
                 button.frame = frame;
                 button.onPointerClickObservable.add(()=>{
