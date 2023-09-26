@@ -2,13 +2,14 @@
 	import {onMounted, ref, toRaw } from 'vue';
 	import myScene from "../babylon/scenes/scene.ts";
 	import {getProject} from "../utils";
+	import localForage from 'localforage';
 	const props = defineProps<{ 
 		projectId: string 
 	}>()
 
 	const bjsCanvas = ref<HTMLCanvasElement|null>(null);
 	const canvasSize = ref({width: 200, height: 200})
-	const project = getProject(props.projectId);
+	const project: any = getProject(props.projectId);
 	console.log(project)
 	const frames = ref(project.document.children[0].children as any[]);
 	myScene.setFrames(toRaw(frames.value))
@@ -23,7 +24,7 @@
 
 	async function fetchAllFigmaNodeFromProject() {
 		const headers = new Headers({
-			'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+			'Authorization': `Bearer ${await localForage.getItem('access_token') || ''}`
 		})
 		let ids = "";
 		frames.value.forEach((frame: any) => {

@@ -2,9 +2,10 @@
 	import {ref} from 'vue';
 	import {useRouter} from "vue-router";
 	import {deleteProject, getAllProjects, storeProject, updateProject} from "../utils";
+	import localForage from 'localforage';
 
 	const router = useRouter();
-	const projects = ref(getAllProjects());
+	const projects = ref([] as any[]);
 	const projectUrl = ref("");
 	const message = ref("");
 	const regex = /https:\/\/([\w\.-]+\.)?figma.com\/(file|proto)\/([0-9a-zA-Z]{22,128})(?:\/.*)?$/;
@@ -19,8 +20,8 @@
 			const fileId = url.split("/")[4];
 			const fileData = await fetchProject(fileId)
 			console.log(fileData)
-			storeProject(fileData)
-			projects.value.push(fileData);
+			await storeProject(fileData)
+			projects.value = await getAllProjects();
 			message.value = "";
 			projectUrl.value = ""
 		} else {
@@ -30,33 +31,51 @@
 	}
 
 	async function removeProject(id: string) {
-		projects.value.splice(projects.value.findIndex((project: any) => project.id == id), 1);
-		deleteProject(id);
+		await deleteProject(id);
+		projects.value = await getAllProjects();
 	}
 
 	async function fetchProject(id: string) {
-		console.log("fetching project")
-		const headers = new Headers({
-			'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
-		})
-		const data = await fetch(`https://api.figma.com/v1/files/${id}`, {
-			method: 'get',
-			headers
-		})
-		const project = await data.json()
-		project.id = id;
-		return project;
+		console.log("fetching project with id: " + id + "...")
+		if(id == null) return null;
+		try{
+			const headers = new Headers({
+				'Authorization': `Bearer ${await localForage.getItem('access_token') || ''}`
+			})
+			const data = await fetch(`https://api.figma.com/v1/files/${id}`, {
+				method: 'get',
+				headers
+			})
+			const project = await data.json()
+			console.log(project)
+			if (project.status == 404) {
+				throw new Error("Project not found")
+			}
+			project.id = id;
+			return project;
+		}
+		catch (e) {
+			console.log(e)
+			return null
+		}
 	}
 
 	async function refreshOnLoad() {
-		console.log("refreshing projects")
+		projects.value = await getAllProjects();
 		const allProjects = projects.value;
 		for(let i = 0; i < allProjects.length; i++) {
 			const project = allProjects[i];
 			const fileData = await fetchProject(project.id)
+			if (fileData == null) {
+				await deleteProject(project.id);
+				allProjects.splice(i, 1);
+				i--;
+				continue;
+			}
 			projects.value[i] = fileData;
 			updateProject(fileData);
 		}
+		console.log(projects.value)
 	}
 
 	refreshOnLoad()

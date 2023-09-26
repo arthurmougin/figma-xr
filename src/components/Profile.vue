@@ -3,8 +3,9 @@ import { ref, watch} from 'vue'
 import {logStateOptions,ProfileType} from "../definition.d";
 import { isLoggedIn, login, logout } from "../utils";
 import { useRouter,useRoute } from "vue-router";
+import localForage from 'localforage';
 
-const logState = ref(isLoggedIn() ? logStateOptions['logged in'] : logStateOptions['not logged in'])
+const logState = ref(await isLoggedIn() ? logStateOptions['logged in'] : logStateOptions['not logged in'])
 const profile = ref<ProfileType | null>(null)
 const router = useRouter()
 const route = useRoute()
@@ -12,7 +13,7 @@ const route = useRoute()
 async function getProfile (){
 	console.log("getting profile")
 	const headers = new Headers({
-		'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+		'Authorization': `Bearer ${await localForage.getItem('access_token') || ''}`
 	})
 	let data:any = {}
 
@@ -44,9 +45,9 @@ watch (logState, async (newVal) => {
 })
 
 
-watch (route, e=> {
+watch (route, async e=> {
 	console.log("route changed", e)
-	if (isLoggedIn()) {
+	if (await isLoggedIn()) {
 		logState.value = logStateOptions['logged in']
 	}
 	else {

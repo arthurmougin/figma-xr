@@ -2,6 +2,7 @@
 import CTA from "../components/CTA.vue";
 import { useRouter, useRoute } from "vue-router";
 import { ref } from "vue";
+import localForage from 'localforage';
 
 const currentUrl = new URL(window.location.href);
 const router = useRouter();
@@ -15,7 +16,7 @@ async function init() {
     return;
   }
   console.log("callback")
-  if (route.query.state == localStorage.getItem("figmaState")) {
+  if (route.query.state == await localForage.getItem("figmaState")) {
     try {
       const getTokenUrl = `https://www.figma.com/api/oauth/token?client_id=${ import.meta.env.VITE_ID
       }&client_secret=${
@@ -27,12 +28,12 @@ async function init() {
         method: "post",
       });
       const json = await data.json();
-      localStorage.setItem("access_token", json.access_token);
-      localStorage.setItem(
+      await localForage.setItem("access_token", json.access_token);
+      await localForage.setItem(
         "expires_in",
         (parseInt(json.expires_in) * 24 * 60 * 60 + Date.now()).toString()
       );
-      localStorage.setItem("refresh_token", json.refresh_token);
+      await localForage.setItem("refresh_token", json.refresh_token);
       router.push("/projects");
     } catch (e) {
       console.error(e);

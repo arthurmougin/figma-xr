@@ -33,11 +33,11 @@ const router = createRouter({
     routes,
 })
 
-router.beforeEach((to, from) => {
+router.beforeEach(async (to, from) => {
     console.log('to', to, 'from', from)
     if(to.name === 'xrview' || to.name === 'projects') {
         //test if logged in
-        if (isLoggedIn()) {
+        if (await isLoggedIn()) {
             return true
         }
         else {
@@ -45,7 +45,7 @@ router.beforeEach((to, from) => {
         }
     }
     else {
-        if (isLoggedIn()) {
+        if (await isLoggedIn()) {
             return { name: 'projects' }
         }
     }
