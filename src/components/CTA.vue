@@ -1,7 +1,5 @@
 <script setup lang="ts">
-defineProps<{
-  login:()=>void
-}>()
+    import { login } from '../utils'
 </script>
 
 <template>

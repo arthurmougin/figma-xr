@@ -111,7 +111,7 @@ const myScene = {
         }
     },
     async createScene (canvas:HTMLCanvasElement) {
-        await xrPolyfillPromise
+        await xrPolyfillPromise;
         var engine = new BABYLON.Engine(canvas);
         var scene = new BABYLON.Scene(engine);
     

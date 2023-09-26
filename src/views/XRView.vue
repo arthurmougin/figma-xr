@@ -1,68 +1,68 @@
 <script lang="ts" setup>
-import {onMounted, ref, toRaw } from 'vue';
-import myScene from "../babylon/scenes/scene.ts";
-import {useRoute} from "vue-router";
+	import {onMounted, ref, toRaw } from 'vue';
+	import myScene from "../babylon/scenes/scene.ts";
+	import {getProject} from "../utils";
+	const props = defineProps<{ 
+		projectId: string 
+	}>()
 
-const route = useRoute()
-const bjsCanvas = ref<HTMLCanvasElement|null>(null);
-const canvasSize = ref({width: 200, height: 200})
-const projects = localStorage.getItem("projects") ? JSON.parse(localStorage.getItem("projects") as string) : [];
-const project = projects.find((project: any) => project.id == route.params.projectId)
-console.log(project)
-const frames = ref(project.document.children[0].children as any[]);
-myScene.setFrames(frames.value)
+	const bjsCanvas = ref<HTMLCanvasElement|null>(null);
+	const canvasSize = ref({width: 200, height: 200})
+	const project = getProject(props.projectId);
+	console.log(project)
+	const frames = ref(project.document.children[0].children as any[]);
+	myScene.setFrames(toRaw(frames.value))
 
 
-onMounted(async () => {
-	if (bjsCanvas.value) {
-		await myScene.createScene(bjsCanvas.value);
-		updateSize()
-	}
-});
+	onMounted(async () => {
+		if (bjsCanvas.value) {
+			await myScene.createScene(bjsCanvas.value);
+			updateSize()
+		}
+	});
 
-async function fetchAllFigmaNodeFromProject() {
-	const headers = new Headers({
-		'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
-	})
-	let ids = "";
-	frames.value.forEach((frame: any) => {
-		ids += frame.id + ','
-	})
-	ids = ids.slice(0, -1);
-	const data = await fetch(`https://api.figma.com/v1/images/${project.id}?ids=${ids}&format=png&scale=1`, {
-		method: 'get',
-		headers,
-	})
-	const json = await data.json();
-	if (json.err) {
-		console.log(json.err)
-	} else {
-		frames.value.forEach((frame: any) => {
-			frame.image = json.images[frame.id]
+	async function fetchAllFigmaNodeFromProject() {
+		const headers = new Headers({
+			'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
 		})
-		myScene.setFrames(toRaw(frames.value))
+		let ids = "";
+		frames.value.forEach((frame: any) => {
+			ids += frame.id + ','
+		})
+		ids = ids.slice(0, -1);
+		const data = await fetch(`https://api.figma.com/v1/images/${project.id}?ids=${ids}&format=png&scale=1`, {
+			method: 'get',
+			headers,
+		})
+		const json = await data.json();
+		if (json.err) {
+			console.error(json.err)
+		} else {
+			frames.value.forEach((frame: any) => {
+				frame.image = json.images[frame.id]
+			})
+			myScene.setFrames(toRaw(frames.value))
+		}
 	}
-}
 
-async function updateSize(){
-	//get bjsCanvas parent size
-	const parent = bjsCanvas.value?.parentElement
-	if (parent) {
-		canvasSize.value.width = parent.clientWidth
-		canvasSize.value.height = parent.clientHeight-1
+	async function updateSize(){
+		//get bjsCanvas parent size
+		const parent = bjsCanvas.value?.parentElement
+		if (parent) {
+			canvasSize.value.width = parent.clientWidth
+			canvasSize.value.height = parent.clientHeight-1
+		}
+		myScene?.Engine?.resize()
 	}
-	myScene?.Engine?.resize()
-}
 
-window.addEventListener('resize', updateSize)
-fetchAllFigmaNodeFromProject()
+	window.addEventListener('resize', updateSize)
+	fetchAllFigmaNodeFromProject()
 </script>
 
 <template>
 	<div class="bjs-canvas-container">
 		<canvas ref="bjsCanvas" :width="canvasSize.width" :height="canvasSize.height"/>
 	</div>
-	
 </template>
 
 <style scoped>

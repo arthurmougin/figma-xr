@@ -1,10 +1,9 @@
 <script lang="ts" setup>
 	import {ref} from 'vue';
-	import {useRoute, useRouter} from "vue-router";
-	import {getAllProjects, storeProject} from "../utils";
+	import {useRouter} from "vue-router";
+	import {deleteProject, getAllProjects, storeProject, updateProject} from "../utils";
 
 	const router = useRouter();
-	const route = useRoute();
 	const projects = ref(getAllProjects());
 	const projectUrl = ref("");
 	const message = ref("");
@@ -32,7 +31,7 @@
 
 	async function removeProject(id: string) {
 		projects.value.splice(projects.value.findIndex((project: any) => project.id == id), 1);
-		localStorage.setItem("projects", JSON.stringify(projects.value))
+		deleteProject(id);
 	}
 
 	async function fetchProject(id: string) {
@@ -52,11 +51,11 @@
 	async function refreshOnLoad() {
 		console.log("refreshing projects")
 		const allProjects = projects.value;
-		projects.value = []
-		for (const project of allProjects) {
+		for(let i = 0; i < allProjects.length; i++) {
+			const project = allProjects[i];
 			const fileData = await fetchProject(project.id)
-			projects.value.push(fileData);
-			localStorage.setItem("projects", JSON.stringify(projects.value))
+			projects.value[i] = fileData;
+			updateProject(fileData);
 		}
 	}
 

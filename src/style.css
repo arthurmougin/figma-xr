@@ -1,5 +1,5 @@
 
-
+@import "./styles/html5-reset.css";
 @import "@material/button/dist/mdc.button.css";
 @import "@material/card/dist/mdc.card.css";
 @import "@material/checkbox/dist/mdc.checkbox.css";

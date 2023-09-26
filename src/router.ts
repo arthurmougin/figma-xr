@@ -16,9 +16,10 @@ const routes = [
         component: ProjectsVue
     },
     {
-        path: '/figma-xr/:projectId',
+        path: '/figma-xr/view/:projectId',
         name: 'xrview',
-        component: XRViewVue
+        component: XRViewVue,
+        props: true
     },
     {
         path: '/:pathMatch(.*)*',
@@ -34,7 +35,7 @@ const router = createRouter({
 
 router.beforeEach((to, from) => {
     console.log('to', to, 'from', from)
-    if(from.name === 'xrview' || to.name === 'projects') {
+    if(to.name === 'xrview' || to.name === 'projects') {
         //test if logged in
         if (isLoggedIn()) {
             return true

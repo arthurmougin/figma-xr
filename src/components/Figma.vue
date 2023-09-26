@@ -1,79 +1,14 @@
 <script lang="ts" setup>
-import {ref} from 'vue'
-import {logStateOptions, ProfileType} from "../definition.d";
 import Profile from "./Profile.vue";
-import {isLoggedIn} from "../utils";
-import { useRoute, useRouter } from 'vue-router'
 
-const logState = ref(logStateOptions['not logged in'])
-const currentUrl = new URL(window.location.href);
-const profileData = ref<ProfileType | null>(null)
-const currentProject = ref<any|null>(null)
-const route = useRoute()
-const router = useRouter()
 
-function login() {
-	const state = Math.random().toString(36).substring(7);
-	localStorage.setItem('figmaState', state)
-	const url = new URL(`https://www.figma.com/oauth?client_id=${import.meta.env.VITE_ID}&redirect_uri=${encodeURI(currentUrl.toString())}?callback&scope=file_read&state=${state}&response_type=code`)
-	window.location.replace(url.toString())
-}
-
-function logout() {
-	localStorage.removeItem('access_token')
-	localStorage.removeItem('expires_in')
-	localStorage.removeItem('refresh_token')
-	logState.value = logStateOptions['not logged in']
-	currentUrl.searchParams.delete('callback')
-	currentUrl.searchParams.delete('code')
-	currentUrl.searchParams.delete('state')
-	window.location.replace(currentUrl.toString())
-}
-
-async function init() {
-	if (isLoggedIn()) {
-		logState.value = logStateOptions['logged in']
-		const headers = new Headers({
-			'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
-		})
-		const data = await fetch('https://api.figma.com/v1/me', {
-			method: 'get',
-			headers
-		})
-		const json = await data.json();
-		profileData.value = json;
-	} else if (currentUrl.searchParams.has('callback')) {
-		if (currentUrl.searchParams.get('state') == localStorage.getItem('figmaState')) {
-			logState.value = logStateOptions['logging in']
-			const getTokenUrl = `https://www.figma.com/api/oauth/token?client_id=${import.meta.env.VITE_ID}&client_secret=${import.meta.env.VITE_SECRET}&redirect_uri=${currentUrl}?callback&code=${currentUrl.searchParams.get('code') || ''}&grant_type=authorization_code`;
-			const data = await fetch(getTokenUrl, {
-				method: 'post'
-			})
-			const json = await data.json();
-			localStorage.setItem('access_token', json.access_token)
-			localStorage.setItem('expires_in', ((parseInt(json.expires_in) * 24 * 60 * 60) + Date.now()).toString())
-			localStorage.setItem('refresh_token', json.refresh_token)
-
-			router.push('/projects');
-		} else {
-			console.error('state mismatch')
-			logState.value = logStateOptions['error']
-		}
-	}
-}
-init()
 
 </script>
 
 <template>
 	<mcw-top-app-bar class="mdc-top-app-bar--fixed">
-		<router-link to="/projects"><h1>Figma XR {{ currentProject ? ` | ${currentProject.name}`:''}}</h1></router-link>
-		<Profile
-			:logState="logState"
-			:login="login"
-			:logout="logout"
-			:profile="profileData"
-		/>
+		<router-link to="/projects"><h1 id="title">Figma XR</h1></router-link>
+		<Profile />
 	</mcw-top-app-bar>
 	<main>
 		<router-view></router-view>
@@ -86,11 +21,14 @@ init()
 		align-items: center;
 		padding: 0 1em;
 		top: 0;
+		position: sticky;
+		padding: 0.5em;
 	}
+	
+	h1#title {
+		font-weight: bold;
+		font-size: 2em;
+		color: var(--accent);
 
-	main {
-		margin-top: 6em;
 	}
-
-
 </style>
