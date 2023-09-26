@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 	import {onMounted, ref, toRaw, watch } from 'vue';
 	import myScene from "../babylon/scenes/scene.ts";
-	import {getProject, isMobile} from "../utils";
+	import {getProject, updateProject} from "../utils";
 	import localForage from 'localforage';
 	const props = defineProps<{ 
 		projectId: string 
@@ -44,8 +44,12 @@
 			console.error(json.err)
 		} else {
 			frames.value.forEach((frame: any) => {
-				frame.image = json.images[frame.id]
+				console.log("found for frame",json.images[frame.id])
+				if (json.images[frame.id]) frame.image = json.images[frame.id]
 			})
+			project.value.document.children[0].children = frames.value
+			updateProject(toRaw(project.value));
+
 			myScene.setFrames(toRaw(frames.value))
 		}
 	}
@@ -84,9 +88,10 @@
 	}
 
 	.bjs-canvas-container {
-		width: 100%;
+		width: 95%;
 		max-width: 70em;
 		height: 75vh;
+		height: 78dvh;
 		max-height: 50em;
 		margin: auto;
 		box-sizing: content-box;

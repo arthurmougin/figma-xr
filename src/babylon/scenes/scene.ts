@@ -233,15 +233,21 @@ const myScene = {
             //first time loading
             buttonTemplate.isVisible = false;
             frames.forEach((frame: any) => {
-                console.log(frame.image)
+                //console.log(frame.image)
                 const button = buttonTemplate.clone() as ButtonFrame;
                 button.isVisible = true;
-                const image = button.getDescendants()[1] as Image;
-                console.log(button)
-                console.log(image)
+                const image = button.getDescendants()[0] as Image;
+                //console.log(button)
+                //console.log(image)
                 image.source = frame.image;
                 button.frame = frame;
+                button.onPointerDownObservable.add(()=>{console.log("down")});
+                button.onPointerUpObservable.add(()=>{console.log("up")});
+                button.onPointerEnterObservable.add(()=>{console.log("enter")});
+                button.onPointerOutObservable.add(()=>{console.log("out")});
+                button.onPointerMoveObservable.add(()=>{console.log("move")});
                 button.onPointerClickObservable.add(()=>{
+                    console.log("spawn")
                     this.Spawn(button.frame)
                 });
                 buttonParent?.addControl(button);

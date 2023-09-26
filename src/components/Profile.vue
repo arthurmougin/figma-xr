@@ -23,11 +23,16 @@ async function getProfile (){
 		})
 	}
 	catch(e) {
-		console.log(e)
+		console.warn(e)
 		logout(router);
 	}
 	finally {
 		const json = await data.json();
+		console.log(json)
+		if(json.err) {
+			console.error(json.err)
+			logout(router);
+		}
 		profile.value = json;
 	}
 
@@ -43,7 +48,7 @@ watch (logState, async (newVal) => {
 })
 
 
-watch (route, async e=> {
+watch (route, async ()=> {
 	if (await isLoggedIn()) {
 		logState.value = logStateOptions['logged in']
 	}
