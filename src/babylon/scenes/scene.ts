@@ -38,6 +38,7 @@ const myScene = {
     Scene:null as BABYLON.Scene|null,
     webXRDefaultExperience:null as BABYLON.WebXRDefaultExperience|null,
     webXRAnchorSystem:null as BABYLON.WebXRAnchorSystem|null,
+    xrBackgroundRemover:null as BABYLON.IWebXRFeature|null,
     async Spawn (frame: any) {
         const scene = this.Scene;
         const UI = this.UI;
@@ -180,6 +181,13 @@ const myScene = {
         const webXRAnchorSystem : BABYLON.WebXRAnchorSystem = featuresManager.enableFeature( BABYLON.WebXRAnchorSystem, 'latest') as BABYLON.WebXRAnchorSystem;
         this.webXRAnchorSystem = webXRAnchorSystem;
 
+        const xrBackgroundRemover = featuresManager.enableFeature(BABYLON.WebXRBackgroundRemover, "latest", {
+            environmentHelperRemovalFlags: {
+              skyBox: true,
+              ground: true,
+            },
+          });
+        this.xrBackgroundRemover = xrBackgroundRemover;
 
         webXRDefaultExperience.baseExperience.onStateChangedObservable.add((state) => {
             //let camera1, xrCamera, camChild;
@@ -230,8 +238,8 @@ const myScene = {
         const buttonParent = buttonTemplate.parent;
 
         if(buttonTemplate.isVisible) {
-            //first time loading
             buttonTemplate.isVisible = false;
+            
             frames.forEach((frame: any) => {
                 //console.log(frame.image)
                 const button = buttonTemplate.clone() as ButtonFrame;
@@ -250,6 +258,7 @@ const myScene = {
                     console.log("spawn")
                     this.Spawn(button.frame)
                 });
+                //button.isPointerBlocker = true;
                 buttonParent?.addControl(button);
             });
         }

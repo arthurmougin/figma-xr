@@ -22,8 +22,22 @@
 		if (bjsCanvas.value) {
 			await myScene.createScene(bjsCanvas.value);
 			updateSize()
+			bjsCanvas.value.addEventListener('click', (e) => {
+				console.log(e)
+			})
+			bjsCanvas.value.addEventListener('touchstart', (e) => {
+				console.log(e)
+			})
+			bjsCanvas.value.addEventListener('touchend', (e) => {
+				console.log(e)
+			})
+			bjsCanvas.value.addEventListener('touchmove', (e) => {
+				console.log(e)
+			})
 			
+
 		}
+		
 	});
 
 	async function fetchAllFigmaNodeFromProject() {
@@ -77,7 +91,7 @@
 
 <template>
 	<div class="bjs-canvas-container">
-		<canvas ref="bjsCanvas" :width="canvasSize.width * 2" :height="canvasSize.height * 2"/>
+		<canvas ref="bjsCanvas" :width="canvasSize.width * 2" :height="canvasSize.height * 2" touch-action="none"/>
 	</div>
 </template>
 
@@ -85,6 +99,9 @@
 	canvas {
 		width: 100%;
 		height: 100%;
+		touch-action: none;
+    	-webkit-tap-highlight-color: transparent;
+    	user-select: none;
 	}
 
 	.bjs-canvas-container {
@@ -96,6 +113,8 @@
 		margin: auto;
 		box-sizing: content-box;
 		box-shadow: 0px 0px 10px #0000005c;
+		touch-action: none;
+    	-webkit-tap-highlight-color: transparent;
 	}
 	
 </style>

@@ -88,11 +88,12 @@ export async function logout(router: any) {
   await localForage.removeItem("expires_in");
   await localForage.removeItem("refresh_token");
   await localForage.removeItem("figmaState");
+  
   //remove all projects in storage
-  const projects = await getAllProjects();
-  projects.forEach((project: any) => {
-    deleteProject(project.id);
-  });
+  //const projects = await getAllProjects();
+  //projects.forEach((project: any) => {
+  //  deleteProject(project.id);
+  //});
   //navigate to landingpage
   router.push({ name: "landingpage" });
 }
