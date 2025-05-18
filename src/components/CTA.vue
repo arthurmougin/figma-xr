@@ -1,10 +1,12 @@
 <script setup lang="ts">
-    import { login } from '../utils'
+import { useStore } from '../store';
+
+const store = useStore()
 </script>
 
 <template>
         <div>
-            <mcw-button id="test" raised @click="login">Try Figma-xr Now</mcw-button>
+            <mcw-button id="test" raised @click="store.login">Try Figma-xr Now</mcw-button>
             <p>or</p>
             <a href="https://www.linkedin.com/in/arthur-mougin/"><mcw-button id="hire" raised>Get in touch</mcw-button></a>
         </div>

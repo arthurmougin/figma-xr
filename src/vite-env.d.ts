@@ -2,8 +2,8 @@
 
 interface ImportMetaEnv {
     readonly VITE_APP_TITLE: string
-    readonly VITE_ID: string
-    readonly VITE_SECRET: string
+    readonly VITE_FIGMA_CLIENT_ID: string
+    readonly VITE_FIGMA_SECRET: string
     // more env variables...
 }
 

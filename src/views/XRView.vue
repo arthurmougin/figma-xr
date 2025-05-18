@@ -22,20 +22,6 @@
 		if (bjsCanvas.value) {
 			await myScene.createScene(bjsCanvas.value);
 			updateSize()
-			bjsCanvas.value.addEventListener('click', (e) => {
-				console.log(e)
-			})
-			bjsCanvas.value.addEventListener('touchstart', (e) => {
-				console.log(e)
-			})
-			bjsCanvas.value.addEventListener('touchend', (e) => {
-				console.log(e)
-			})
-			bjsCanvas.value.addEventListener('touchmove', (e) => {
-				console.log(e)
-			})
-			
-
 		}
 		
 	});
@@ -48,6 +34,7 @@
 		frames.value.forEach((frame: any) => {
 			ids += frame.id + ','
 		})
+	
 		ids = ids.slice(0, -1);
 		const data = await fetch(`https://api.figma.com/v1/images/${project.value.id}?ids=${ids}&format=png&scale=1`, {
 			method: 'get',
@@ -58,7 +45,7 @@
 			console.error(json.err)
 		} else {
 			frames.value.forEach((frame: any) => {
-				console.log("found for frame",json.images[frame.id])
+				//console.log("found for frame",json.images[frame.id])
 				if (json.images[frame.id]) frame.image = json.images[frame.id]
 			})
 			project.value.document.children[0].children = frames.value
@@ -69,13 +56,13 @@
 	}
 
 	async function updateSize(){
-		console.log("resize")
+		//console.log("resize")
 		//get bjsCanvas parent size
 		const parent = bjsCanvas.value?.parentElement
 		if (parent) {
 			canvasSize.value.width = parent.clientWidth
 			canvasSize.value.height = parent.clientHeight-1
-			console.log(canvasSize.value)
+			//console.log(canvasSize.value)
 		}
 		myScene?.Engine?.resize(true)
 	}

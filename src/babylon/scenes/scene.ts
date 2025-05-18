@@ -1,7 +1,8 @@
 import * as BABYLON from "@babylonjs/core";
 import {AdvancedDynamicTexture, Container, Control, Image} from "@babylonjs/gui/2D";
-import {root} from "../gui/gui-main.json";
-import {isMobile} from "../../utils";
+import * as GUI from "@babylonjs/gui";
+//import {root} from "../gui/gui-main.json";
+//import {isMobile} from "../../utils";
 
 // create button type that extends Control and add frame as property
 class ButtonFrame extends Control {
@@ -155,13 +156,21 @@ const myScene = {
             engine.resize();
         });
 
-        let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("MainGUI", true, scene);
-        this.UI = advancedTexture;
-        advancedTexture.parseSerializedObject({root});
-        advancedTexture.renderScale = 2;
-        if(isMobile()) {
-            advancedTexture.renderScale = 1;
-        }
+        //create a HolographicButton;
+        const OpenButton = new GUI.HolographicButton("OpenButton", false);
+        OpenButton.text = "Open";
+        OpenButton.imageUrl = "../images/Button.png";
+        
+
+        /*
+            let advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("MainGUI", true, scene);
+            this.UI = advancedTexture;
+            advancedTexture.parseSerializedObject({root});
+            advancedTexture.renderScale = 2;
+            if(isMobile()) {
+                advancedTexture.renderScale = 1;
+            }
+        */
 
         const webXRDefaultExperience = await scene.createDefaultXRExperienceAsync({
             uiOptions: {
@@ -171,12 +180,24 @@ const myScene = {
             disableTeleportation: true,
             optionalFeatures: [
                 "hit-test",
-                "dom-overlay",
                 "anchors",
                 "light-estimation"
-            ]
+            ],
+            disablePointerSelection:false,
+            pointerSelectionOptions: {
+                disablePointerUpOnTouchOut:false,
+                enablePointerSelectionOnAllControllers:true,
+            }
         });
         this.webXRDefaultExperience = webXRDefaultExperience;
+
+        
+        //set the advanced texture as plane attached to the XR camera when entering XR and set it back when exiting
+        // on enter in xr
+        
+
+
+
         const featuresManager = webXRDefaultExperience.baseExperience.featuresManager;
         const webXRAnchorSystem : BABYLON.WebXRAnchorSystem = featuresManager.enableFeature( BABYLON.WebXRAnchorSystem, 'latest') as BABYLON.WebXRAnchorSystem;
         this.webXRAnchorSystem = webXRAnchorSystem;
@@ -189,38 +210,9 @@ const myScene = {
           });
         this.xrBackgroundRemover = xrBackgroundRemover;
 
-        webXRDefaultExperience.baseExperience.onStateChangedObservable.add((state) => {
-            //let camera1, xrCamera, camChild;
-            switch (state) {
-                case BABYLON.WebXRState.IN_XR:
-                    // XR is initialized and already submitted one frame
-                    console.log("in xr")
-                    break;
-                case BABYLON.WebXRState.ENTERING_XR:
-                    // xr is being initialized, enter XR request was made
-                    console.log("entering xr")
-                    //move gui and children of free camera to xr camera
-                    //camera1 = scene.getCameraByName("camera1") as BABYLON.Camera;
-                    //xrCamera = webXRDefaultExperience.baseExperience.camera;
-                    //camChild = camera.getChildren()[0] as MeshFrame;
-                    //camChild.setParent(xrCamera);
-                    break;
-                case BABYLON.WebXRState.EXITING_XR:
-                    // xr exit request was made. not yet done.
-                    console.log("exiting xr")
-                    //move gui and children of xr camera to free camera called camera1
-                    //camera1 = scene.getCameraByName("camera1") as BABYLON.Camera;
-                    //xrCamera = webXRDefaultExperience.baseExperience.camera;
-                    //camChild = xrCamera.getChildren()[0] as MeshFrame;
-                    //camChild.setParent(camera1);
 
-                    break;
-                case BABYLON.WebXRState.NOT_IN_XR:
-                    // self explanatory - either out or not yet in XR
-                    console.log("not in xr")
-                    break;
-            }
-        })
+    
+
         return scene;
     },
     async setFrames (frames:any[]) {

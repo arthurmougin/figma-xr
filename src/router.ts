@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LandingPageVue from './views/LandingPage.vue'
 import ProjectsVue from './views/Projects.vue'
 import XRViewVue from './views/XRView.vue'
-import { isLoggedIn } from './utils'
+import { useStore } from './store'
 
 const routes = [
     {
@@ -13,12 +13,18 @@ const routes = [
     {
         path: '/figma-xr/projects',
         name: 'projects',
-        component: ProjectsVue
+        component: ProjectsVue,
+        meta: {
+            requiresAuth: true
+        }
     },
     {
         path: '/figma-xr/view/:projectId',
         name: 'xrview',
         component: XRViewVue,
+        meta: {
+            requiresAuth: true
+        },
         props: true
     },
     {
@@ -33,23 +39,17 @@ const router = createRouter({
     routes,
 })
 
-router.beforeEach(async (to, from) => {
-    console.log('to', to, 'from', from)
-    if(to.name === 'xrview' || to.name === 'projects') {
-        //test if logged in
-        if (await isLoggedIn()) {
-            return true
-        }
-        else {
-            return { name: 'landingpage' }
-        }
+router.beforeEach(async (to, from, next) => {
+ if (to.matched.some(record => record.meta.requiresAuth)) {
+    const store = useStore()
+    if (store.isLoggedIn == false) {
+      next('landingpage');
+    } else {
+      next();
     }
-    else {
-        if (await isLoggedIn()) {
-            return { name: 'projects' }
-        }
-    }
-    return true
+  } else {
+    next();
+  }
 })
 
 export default router

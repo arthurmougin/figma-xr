@@ -1,17 +1,5 @@
 import localForage from "localforage";
 
-export async function isLoggedIn() {
-  const access_token = await localForage.getItem("access_token");
-  const expires_in = (await localForage.getItem("expires_in")) as string;
-  if (access_token === null || expires_in === null) {
-    return false;
-  }
-  if (Date.now() > parseInt(expires_in)) {
-    return false;
-  }
-  return true;
-}
-
 export async function storeProject(project: any) {
   if (project.status == 404) {
     console.log("Project not found");
@@ -69,34 +57,6 @@ export async function getAllProjects(): Promise<{}[]> {
   return allProjects;
 }
 
-export async function login() {
-  const currentUrl = new URL(window.location.href);
-  const state = Math.random().toString(36).substring(7);
-  await localForage.setItem("figmaState", state);
-  const url = new URL(
-    `https://www.figma.com/oauth?client_id=${
-      import.meta.env.VITE_ID
-    }&redirect_uri=${encodeURI(
-      currentUrl.toString()
-    )}?callback&scope=file_read&state=${state}&response_type=code`
-  );
-  window.location.replace(url.toString());
-}
-
-export async function logout(router: any) {
-  await localForage.removeItem("access_token");
-  await localForage.removeItem("expires_in");
-  await localForage.removeItem("refresh_token");
-  await localForage.removeItem("figmaState");
-  
-  //remove all projects in storage
-  //const projects = await getAllProjects();
-  //projects.forEach((project: any) => {
-  //  deleteProject(project.id);
-  //});
-  //navigate to landingpage
-  router.push({ name: "landingpage" });
-}
 
 export function isMobile() {
 	const a = navigator.userAgent || navigator.vendor || (window as any).opera;
