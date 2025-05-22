@@ -8,7 +8,7 @@
 	const projects = ref([] as any[]);
 	const projectUrl = ref("");
 	const message = ref("");
-	const regex = /https:\/\/([\w\.-]+\.)?figma.com\/(file|proto)\/([0-9a-zA-Z]{22,128})(?:\/.*)?$/;
+	const regex = /https:\/\/([\w\.-]+\.)?figma.com\/(file|proto|design)\/([0-9a-zA-Z]{22,128})(?:\/.*)?$/;
 
 
 	async function onAddProject() {
@@ -94,13 +94,13 @@
 				<mcw-card-actions>
 					<mcw-card-action-buttons>
 						<mcw-button raised @click="router.push({ name: 'xrview', params: {projectId: project.id}})">Open</mcw-button>
-						<mcw-button outlined @click="removeProject(project.id)">Delete </mcw-button>
+						<mcw-button outlined @click="removeProject(project.id)">Remove</mcw-button>
 					</mcw-card-action-buttons>
 				</mcw-card-actions>
 			</mcw-card>
 		</li>
 		<li id="add">
-			<a target="_blank" href="https://www.figma.com/files"><mcw-button outlined>Find projects you want to see in XR</mcw-button></a>
+			<a target="_blank" href="https://www.figma.com/files">Find projects you want to see in XR...</a>
 			<mcw-textfield
 				v-model="projectUrl"
 				:label="message ? message : 'And paste their link here'"

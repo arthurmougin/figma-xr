@@ -3,6 +3,7 @@
 	import myScene from "../babylon/scenes/scene.ts";
 	import {getProject, updateProject} from "../utils";
 	import localForage from 'localforage';
+import { useRouter } from 'vue-router';
 	const props = defineProps<{ 
 		projectId: string 
 	}>()
@@ -74,12 +75,16 @@
 			project.value = tmpProject;
 	}
 	init()
+	
+	const router = useRouter()
 </script>
 
 <template>
 	<div class="bjs-canvas-container">
 		<canvas ref="bjsCanvas" :width="canvasSize.width * 2" :height="canvasSize.height * 2" touch-action="none"/>
 	</div>
+	
+    <mcw-button @click="router.go(-1)">&lt; Back</mcw-button>
 </template>
 
 <style scoped>

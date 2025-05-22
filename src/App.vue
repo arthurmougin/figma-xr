@@ -11,7 +11,8 @@ store.initiateAuth()
 
 <template>
   <mcw-top-app-bar class="mdc-top-app-bar--fixed">
-    <router-link to="/projects"><h1 id="title">Figma XR</h1></router-link>
+    <router-link :to="{ name: 'projects'}"><h1 id="title">Figma XR</h1></router-link>
+
     <suspense><ProfileTag /></suspense>
   </mcw-top-app-bar>
   <mcw-snackbar

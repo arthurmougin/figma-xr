@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import localForage from "localforage";
 import { ProfileType } from './definition'
-import { useRoute } from 'vue-router';
 import { Buffer } from 'buffer';
 
 export const useStore = defineStore('store', {
@@ -47,6 +46,7 @@ export const useStore = defineStore('store', {
                     this.logout();
                     return;
                 }
+                localForage.setItem("profil", json);
                 this.profile = json
             }
         },
@@ -75,6 +75,7 @@ export const useStore = defineStore('store', {
             this.access_token = await localForage.getItem("access_token");
             this.expires_in = await localForage.getItem("expires_in");
             this.refresh_token = await localForage.getItem("refresh_token");
+            this.profile = await localForage.getItem("profile");
 
             const urlParams = new URL(window.location.toLocaleString()).searchParams;
             
@@ -96,22 +97,22 @@ export const useStore = defineStore('store', {
 
                 const code = urlParams.get("code") || "";
 
+                const headers = new Headers();
+                headers.set('Content-Type','application/x-www-form-urlencoded')
+
                 const base64EncodedClientIDAndSecret = Buffer.from(`${import.meta.env.VITE_FIGMA_CLIENT_ID}:${import.meta.env.VITE_FIGMA_SECRET}`).toString('base64')
-               
-                const headers = {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Authorization': `Basic ${base64EncodedClientIDAndSecret}`,
-                        'body': `redirect_uri=${encodeURIComponent(redirect_uri)}&code=${encodeURIComponent(code)}&grant_type=authorization_code
-`
+                headers.set('Authorization',`Basic ${base64EncodedClientIDAndSecret}`)
+                
+                const body = `redirect_uri=${encodeURIComponent(redirect_uri)}&code=${encodeURIComponent(code)}&grant_type=authorization_code`;
+
+                const options = {
+                    cors: 'no-cors',
+                    method:"POST",
+                    body,
+                    headers
                 }
-
-                //this currently returns the following error "POST https://api.figma.com/v1/oauth/token net::ERR_ABORTED 400 (Bad Request)"
-                const data = await fetch(url, {
-                    mode: 'no-cors',
-                    method: "POST",
-                    headers: headers,
-                });
-
+                const request = new Request(url,options);
+                const data = await fetch(request);
                 const json = await data.json();
 
                 this.access_token = json.access_token;
@@ -123,7 +124,7 @@ export const useStore = defineStore('store', {
                 localForage.setItem("refresh_token", json.refresh_token);
                 this.refresh_token = json.refresh_token;
 
-                this.router.push("/projects");
+                this.router.push({name: "projects"});
 
             } catch (e) {
                 console.error(e)
@@ -135,14 +136,13 @@ export const useStore = defineStore('store', {
             localForage.removeItem("expires_in");
             localForage.removeItem("refresh_token");
             localForage.removeItem("figma_state");
-            //@ts-ignore
+            localForage.removeItem("profile");
             this.access_token = null;
-            //@ts-ignore
             this.expires_in = null;
-            //@ts-ignore
             this.refresh_token = null;
-            //@ts-ignore
             this.figma_state = null;
+            this.profile = null;
+            this.router.push({name: "landingpage"});
 
             //TODO : Force Navigation to navigation
         }
