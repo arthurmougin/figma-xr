@@ -39,7 +39,7 @@ const router = createRouter({
     routes,
 })
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
  if (to.matched.some(record => record.meta.requiresAuth)) {
     const store = useStore()
     if (store.isLoggedIn == false) {

@@ -1,6 +1,6 @@
 import localForage from "localforage";
 import { FrameImage, ProjectData, ProjectList } from "./definition";
-import { GetImagesResponse, SubcanvasNode } from "@figma/rest-api-spec";
+import { GetImagesResponse } from "@figma/rest-api-spec";
 
 export async function saveProjectToStorage(project: ProjectData) {
   await localForage.setItem(`project_${project.id}`, project);
