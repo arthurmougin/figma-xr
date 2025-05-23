@@ -30,6 +30,6 @@
     "vite": "^4.4.5",
     "vite-plugin-mkcert": "^1.16.0",
     "vue-material-adapter": "^6.2.0",
-    "vue-tsc": "^1.8.5"
+    "vue-tsc": "^2.2.0"
   }
 }
