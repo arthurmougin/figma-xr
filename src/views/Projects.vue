@@ -1,43 +1,54 @@
 <script lang="ts" setup>
-	import {ref} from 'vue';
+	import {Ref, ref} from 'vue';
 	import {useRouter} from "vue-router";
-	import {deleteProject, getAllProjects, storeProject, updateProject} from "../utils";
+	import {deleteProjectFromStorage, getAllProjectsInStorage, saveProjectToStorage, updateProjectInStorage} from "../utils";
 	import localForage from 'localforage';
+import { ProjectData } from '../definition';
 
 	const router = useRouter();
-	const projects = ref([] as any[]);
+	const projects : Ref<ProjectData[]> = ref([]);
 	const projectUrl = ref("");
 	const message = ref("");
 	const regex = /https:\/\/([\w\.-]+\.)?figma.com\/(file|proto|design)\/([0-9a-zA-Z]{22,128})(?:\/.*)?$/;
 
 
-	async function onAddProject() {
+	async function addProject() {
 		const url = projectUrl.value
 		//test si regex marche, si oui ajoute projet, sinon attend
 		const match = url.match(regex)
-		if (match) {
-			message.value = "Project being imported locally..."
-			const fileId = url.split("/")[4];
-			const fileData = await fetchProject(fileId)
-			console.log(fileData)
-			await storeProject(fileData)
-			projects.value = await getAllProjects();
-			message.value = "";
-			projectUrl.value = ""
-		} else {
+
+
+		if (!match) {
 			if (projectUrl.value != "") message.value = "not recognized as project url."
 			else message.value = ""
+			return;
 		}
+
+		message.value = "Project being imported locally..."
+		const fileId = url.split("/")[4];
+		const fileData : ProjectData | undefined = await fetchProject(fileId)
+
+		if(!fileData){
+			message.value = "failed to import project."
+			return;
+		}
+		
+		console.log(fileData)
+		await saveProjectToStorage(fileData)
+		projects.value = await getAllProjectsInStorage();
+		message.value = "";
+		projectUrl.value = ""
+		
 	}
 
 	async function removeProject(id: string) {
-		await deleteProject(id);
-		projects.value = await getAllProjects();
+		await deleteProjectFromStorage(id);
+		projects.value = await getAllProjectsInStorage();
 	}
 
-	async function fetchProject(id: string) {
+	async function fetchProject(id: string) : Promise<ProjectData | undefined>{
 		console.log("fetching project with id: " + id + "...")
-		if(id == null) return null;
+		if(id == null) return undefined;
 		try{
 			const headers = new Headers({
 				'Authorization': `Bearer ${await localForage.getItem('access_token') || ''}`
@@ -46,39 +57,38 @@
 				method: 'get',
 				headers
 			})
-			const project = await data.json()
-			console.log(project)
-			if (project.status == 404) {
-				throw new Error("Project not found")
-			}
+			const project : ProjectData = await data.json()
+			
 			project.id = id;
+			console.log(project)
 			return project;
 		}
 		catch (e) {
 			console.log(e)
-			return null
+			return undefined
 		}
 	}
 
 	async function refreshOnLoad() {
-		projects.value = await getAllProjects();
+		projects.value = await getAllProjectsInStorage();
 		const allProjects = projects.value;
 		for(let i = 0; i < allProjects.length; i++) {
 			const project = allProjects[i];
 			const fileData = await fetchProject(project.id)
 			if (fileData == null) {
-				await deleteProject(project.id);
+				await deleteProjectFromStorage(project.id);
 				allProjects.splice(i, 1);
 				i--;
 				continue;
 			}
 			projects.value[i] = fileData;
-			updateProject(fileData);
+			updateProjectInStorage(fileData);
 		}
 		console.log(projects.value)
 	}
 
 	refreshOnLoad()
+	
 </script>
 
 <template>
@@ -105,7 +115,8 @@
 				v-model="projectUrl"
 				:label="message ? message : 'And paste their link here'"
 				@input="(event:Event) => {
-			         projectUrl = (event.target as HTMLInputElement).value; onAddProject()
+			         projectUrl = (event.target as HTMLInputElement).value; 
+					 addProject()
 			       }"
 			/>
 		</li>

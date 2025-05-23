@@ -1,31 +1,27 @@
 import localForage from "localforage";
+import { FrameImage, ProjectData, ProjectList } from "./definition";
+import { GetImagesResponse, SubcanvasNode } from "@figma/rest-api-spec";
 
-export async function storeProject(project: any) {
-  if (project.status == 404) {
-    console.log("Project not found");
-    throw new Error("Project not found");
-  }
-  if (project.id === undefined) {
-    project.id = Date.now();
-  }
+export async function saveProjectToStorage(project: ProjectData) {
   await localForage.setItem(`project_${project.id}`, project);
-  const projects = ((await localForage.getItem("projects")) as any[]) || [];
+  const projects : ProjectList = await localForage.getItem("projects") || [];
   projects.push(project.id);
   await localForage.setItem("projects", projects);
 }
 
-export async function getProject(projectId: string) {
-  const project =
+export async function getProjectFromStorage(projectId: string): Promise<ProjectData> {
+  const project : ProjectData|undefined =
     (await localForage.getItem(`project_${projectId}`)) || undefined;
   if (project === undefined) {
     throw new Error("Project not found");
   }
+  console.log(project)
   return project;
 }
 
-export async function deleteProject(projectId: string) {
+export async function deleteProjectFromStorage(projectId: string) {
   localForage.removeItem(`project_${projectId}`);
-  const projects = ((await localForage.getItem("projects")) as any[]) || [];
+  const projects : ProjectList = await localForage.getItem("projects") || [];
   const index = projects.indexOf(projectId);
   if (index > -1) {
     projects.splice(index, 1);
@@ -33,21 +29,21 @@ export async function deleteProject(projectId: string) {
   await localForage.setItem("projects", projects);
 }
 
-export function updateProject(project: any) {
+export function updateProjectInStorage(project: ProjectData) {
   //if the project is not in the database, store it
   if (project.id === undefined) {
-    storeProject(project);
+    saveProjectToStorage(project);
     return;
   }
   localForage.setItem(`project_${project.id}`, project);
 }
 
-export async function getAllProjects(): Promise<{}[]> {
-  const projects = ((await localForage.getItem("projects")) as any[]) || [];
-  const allProjects = [];
+export async function getAllProjectsInStorage(): Promise<ProjectData []> {
+  const projects : ProjectList = await localForage.getItem("projects") || [];
+  const allProjects : ProjectData[] = [];
   for (let i = 0; i < projects.length; i++) {
     try {
-      allProjects[i] = await getProject(projects[i]);
+      allProjects[i] = await getProjectFromStorage(projects[i]);
     } catch (error) {
       projects.splice(i, 1);
       i--;
@@ -71,3 +67,34 @@ export function isMobile() {
    return true;
    else return false;
 };
+
+
+export async function fetchAllFigmaNodeFromProject(project: ProjectData) : Promise<FrameImage[]|undefined> {
+	const headers = new Headers({
+		'Authorization': `Bearer ${await localForage.getItem('access_token') || ''}`
+	})
+	
+	const frameList:FrameImage[] = project.document.children[0].children.map<FrameImage>(node => {return {id:node.id,nodeType:node.type.toString()}})
+	const idsString = frameList.map(frame => frame.id).toString()
+
+	try {
+
+	const data = await fetch(`https://api.figma.com/v1/images/${project.id}?ids=${idsString}&format=png&scale=1`, {
+		method: 'get',
+		headers,
+	})
+
+	const json : GetImagesResponse = await data.json();
+
+  frameList.forEach(frame => {
+			const imageUrl = json.images[frame.id];
+      if(imageUrl)frame.image = imageUrl;
+  });
+  
+			
+	return frameList;
+	}
+	catch(e){
+		console.error(e)
+	}
+}

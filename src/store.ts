@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import localForage from "localforage";
-import { ProfileType } from './definition'
 import { Buffer } from 'buffer';
+import { GetMeResponse, } from '@figma/rest-api-spec';
 
 export const useStore = defineStore('store', {
     state: () => ({
@@ -9,7 +9,7 @@ export const useStore = defineStore('store', {
         access_token: null as string|null,
         expires_in: null as number|null,
         refresh_token: null as string|null,
-        profile: null as null | ProfileType
+        profile: null as null | GetMeResponse
     }),
     getters: {
         isLoggedIn: (state) => {
@@ -39,13 +39,14 @@ export const useStore = defineStore('store', {
                 this.logout();
                 return;
             } finally {
-                const json = await data.json();
-                console.log(json);
-                if (json.err) {
-                    console.error(json.err);
+                if (!data.ok) {
+                    const errorText = await data.text();
+                    console.error(errorText);
                     this.logout();
                     return;
                 }
+                const json : GetMeResponse = await data.json();
+                console.log(json);
                 localForage.setItem("profil", json);
                 this.profile = json
             }

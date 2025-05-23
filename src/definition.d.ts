@@ -1,3 +1,5 @@
+import { GetFileResponse } from '@figma/rest-api-spec';
+
 export enum logStateOptions {
     'not logged in',
     'logging in',
@@ -5,10 +7,9 @@ export enum logStateOptions {
     'error'
 }
 
-export type ProfileType = {
-    id: string,
-    email: string,
-    handle: string,
-    img_url: string
+export type ProjectData = GetFileResponse & {
+    id:string
 }
 
+export type FrameImage = {id:string,nodeType:string,image?:string}
+export type ProjectList = string[]
