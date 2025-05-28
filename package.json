@@ -11,11 +11,11 @@
     "adb_connect": "adb reverse tcp:5173 tcp:5173"
   },
   "dependencies": {
-    "@babylonjs/core": "^6.16.0",
-    "@babylonjs/gui": "^6.18.0",
-    "@babylonjs/inspector": "^6.16.0",
-    "@babylonjs/loaders": "^6.16.0",
-    "@babylonjs/materials": "^6.19.1",
+    "@babylonjs/core": "^8.9.1",
+    "@babylonjs/gui": "^8.9.1",
+    "@babylonjs/inspector": "^8.9.1",
+    "@babylonjs/loaders": "^8.9.1",
+    "@babylonjs/materials": "^8.9.1",
     "@figma/rest-api-spec": "^0.30.0",
     "buffer": "^6.0.3",
     "localforage": "^1.10.0",

@@ -1,6 +1,8 @@
-import { Engine, Scene, FreeCamera, Vector3, MeshBuilder, StandardMaterial, Color3, HemisphericLight } from "@babylonjs/core";
+import { Engine, Scene, FreeCamera, Vector3, HemisphericLight } from "@babylonjs/core";
+import { FrameImage } from "../../definition";
+import "@babylonjs/loaders/glTF/2.0";
 
-const createScene = (canvas: HTMLCanvasElement) => {
+const createScene = async (canvas: HTMLCanvasElement) => {
   const engine = new Engine(canvas);
   const scene = new Scene(engine);
 
@@ -10,16 +12,47 @@ const createScene = (canvas: HTMLCanvasElement) => {
 
   new HemisphericLight("light", Vector3.Up(), scene);
 
-  const box = MeshBuilder.CreateBox("box", { size: 2 }, scene);
-  const material = new StandardMaterial("box-material", scene);
-  material.diffuseColor = Color3.Blue();
-  box.material = material;
+
+
+  // here we add XR support
+  const xr = await scene.createDefaultXRExperienceAsync({
+    disableTeleportation:true,
+    uiOptions: {
+      sessionMode: "immersive-ar",
+      requiredFeatures: ["anchors"],
+    }
+  });
+
+  xr.baseExperience.featuresManager.enableFeature("xr-dom-overlay","stable",{
+    element: ".html-ui"
+  }, undefined, true);
+
+  const anchorSystem = xr.baseExperience.featuresManager.getEnabledFeature("xr-anchor-system");
+  console.log(xr, anchorSystem);
+
+
+
+
+
+
+
+
+
+
 
   window.addEventListener('resize', () => engine.resize(true))
 
   engine.runRenderLoop(() => {
     scene.render();
   });
+  
+  function sendToBabylonjs(data:FrameImage){
+    console.log(data);
+    // Send data to Babylon.js
+  }
+
+  return sendToBabylonjs
+
 };
 
 export { createScene };

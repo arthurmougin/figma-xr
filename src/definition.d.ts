@@ -11,5 +11,9 @@ export type ProjectData = GetFileResponse & {
     id:string
 }
 
-export type FrameImage = {id:string,nodeType:string,image?:string}
+export type FrameImage = {
+    id:string,
+    name:string,
+    image?:string
+}
 export type ProjectList = string[]

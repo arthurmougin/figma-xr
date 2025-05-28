@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, Ref, ref } from 'vue';
+import { onMounted, Ref, ref, toRaw } from 'vue';
 import { fetchAllFigmaNodeFromProject, getProjectFromStorage } from "../utils";
 import { useRouter } from 'vue-router';
 import { createScene } from '../babylon/scenes/scene';
@@ -10,43 +10,54 @@ const props = defineProps<{
 
 const router = useRouter()
 const canvas = ref<HTMLCanvasElement | null>(null);
-const project : Ref<ProjectData> = ref({} as ProjectData);
+const project: Ref<ProjectData> = ref({} as ProjectData);
 const frames = ref([] as FrameImage[]);
+const callToBabylon = ref<(data: FrameImage) => void>(() => {});
 
 
-async function init(){
+async function init() {
 	const tmpProject = await getProjectFromStorage(props.projectId)
-	if (tmpProject){
+	if (tmpProject) {
 		project.value = tmpProject;
 		frames.value = await fetchAllFigmaNodeFromProject(project.value) || []
-		console.log(project.value,frames.value)
 	}
 }
 
 onMounted(async () => {
 	if (canvas.value) {
-		createScene(canvas.value)
+		callToBabylon.value = await createScene(canvas.value)
 	}
 });
 
 
 init()
+
+const onPrimaryAction = (data : FrameImage) => {
+	console.log("Primary action triggered");
+	callToBabylon.value(toRaw(data));
+}
 </script>
 
 <template>
 	<div class="bjs-canvas-container">
-		<canvas ref="canvas"/>
+		<canvas ref="canvas" />
 		<div class="html-ui">
-			<mcw-button class="button" raised @click="router.go(-1)">&lt; Back</mcw-button>
 			<ul>
 				<template v-for="frame in frames">
 					<li v-if="frame.image">
-						<mcw-button class="md-icon-button"><img :src="frame.image" :alt="`image of node ${frame.id} of type ${frame.nodeType}`"></mcw-button>
+						<mcw-card>
+							<mcw-card-primary-action @click="onPrimaryAction(frame)">
+								<mcw-card-media :src="frame.image" square></mcw-card-media>
+							</mcw-card-primary-action>
+							<section>
+								<h3>{{ frame.name }}</h3>
+							</section>
+						</mcw-card>
 					</li>
 				</template>
 			</ul>
+			<mcw-button class="button" raised @click="router.go(-1)">&lt; Back</mcw-button>
 		</div>
-		
 	</div>
 
 </template>
@@ -80,25 +91,35 @@ canvas {
 	left: 0;
 	right: 0;
 	bottom: 0;
+	padding: 0;
 	display: flex;
 }
 
-.html-ui > button {
+.html-ui>button {
+	position: absolute;
 	margin: 1em;
-
+	bottom: -2em;
 }
 
 ul {
 	display: flex;
 	overflow-x: auto;
-	margin: 1em;
+	padding: 1em;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: center;
 }
 
 li {
 	display: flex;
+	padding: 0.5em;
 }
 
-ul li img {
-	height: 3em;
+h3 {
+	padding: 0.5em;
+	width: 5em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 </style>

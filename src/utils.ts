@@ -15,7 +15,6 @@ export async function getProjectFromStorage(projectId: string): Promise<ProjectD
   if (project === undefined) {
     throw new Error("Project not found");
   }
-  console.log(project)
   return project;
 }
 
@@ -74,7 +73,9 @@ export async function fetchAllFigmaNodeFromProject(project: ProjectData) : Promi
 		'Authorization': `Bearer ${await localForage.getItem('access_token') || ''}`
 	})
 	
-	const frameList:FrameImage[] = project.document.children[0].children.map<FrameImage>(node => {return {id:node.id,nodeType:node.type.toString()}})
+	const frameList:FrameImage[] = project.document.children[0].children.map<FrameImage>(node => {
+    return {id:node.id,name:node.name.toString()}
+  })
 	const idsString = frameList.map(frame => frame.id).toString()
 
 	try {

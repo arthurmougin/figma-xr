@@ -1,6 +1,7 @@
 import { createApp, markRaw } from 'vue'
 import './style.css'
 import App from './App.vue'
+//TODO move  to popular alternative
 import VueMaterialAdapter from 'vue-material-adapter'
 import router from './router';
 import { createPinia } from 'pinia';
