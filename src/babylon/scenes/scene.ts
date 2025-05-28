@@ -1,4 +1,4 @@
-import { Engine, Scene, FreeCamera, Vector3, HemisphericLight } from "@babylonjs/core";
+import { Engine, Scene, FreeCamera, Vector3, HemisphericLight, WebXRFeatureName } from "@babylonjs/core";
 import { FrameImage } from "../../definition";
 import "@babylonjs/loaders/glTF/2.0";
 
@@ -23,11 +23,11 @@ const createScene = async (canvas: HTMLCanvasElement) => {
     }
   });
 
-  xr.baseExperience.featuresManager.enableFeature("xr-dom-overlay","stable",{
+  xr.baseExperience.featuresManager.enableFeature(WebXRFeatureName.DOM_OVERLAY,"stable",{
     element: ".html-ui"
   }, undefined, true);
 
-  const anchorSystem = xr.baseExperience.featuresManager.getEnabledFeature("xr-anchor-system");
+  const anchorSystem = xr.baseExperience.featuresManager.getEnabledFeature(WebXRFeatureName.ANCHOR_SYSTEM);
   console.log(xr, anchorSystem);
 
 
