@@ -8,7 +8,7 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "serveo": "ssh -R 80:localhost:5173 serveo.net",
-    "adb_connect" : "adb reverse tcp:5173 tcp:5173"
+    "adb_connect": "adb reverse tcp:5173 tcp:5173"
   },
   "dependencies": {
     "@babylonjs/core": "^6.16.0",
@@ -17,6 +17,8 @@
     "@babylonjs/loaders": "^6.16.0",
     "@babylonjs/materials": "^6.19.1",
     "localforage": "^1.10.0",
+    "pinia": "^3.0.3",
+    "pinia-plugin-persistedstate": "^4.4.1",
     "vue": "^3.3.4",
     "vue-router": "^4.2.4"
   },

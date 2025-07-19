@@ -1,11 +1,17 @@
 <script lang="ts" setup>
+import { useAuthStore } from "../store/auth.store";
 import Profile from "./Profile.vue";
+useAuthStore().checkLogin();
 </script>
 
 <template>
   <mcw-top-app-bar class="mdc-top-app-bar--fixed">
-    <router-link to="/projects"><h1 id="title">Figma XR</h1></router-link>
-    <suspense><Profile /></suspense>
+    <router-link :to="{ name: 'projects' }">
+      <h1 id="title">Figma XR</h1>
+    </router-link>
+    <suspense>
+      <Profile />
+    </suspense>
   </mcw-top-app-bar>
   <main>
     <router-view></router-view>

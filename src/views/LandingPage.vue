@@ -1,61 +1,14 @@
 <script setup lang="ts">
 import CTA from "../components/CTA.vue";
-import { useRouter, useRoute } from "vue-router";
 import { ref } from "vue";
-import localForage from 'localforage';
 
-const currentUrl = new URL(window.location.href);
-const router = useRouter();
-const route = useRoute();
 const errorMessage = ref("");
 const open = ref(false);
 
-async function init() {
-    console.log("init", route.query)
-  if (route.query.callback === undefined) {
-    return;
-  }
-  console.log("callback")
-  if (route.query.state == await localForage.getItem("figmaState")) {
-    try {
-      const getTokenUrl = `https://www.figma.com/api/oauth/token?client_id=${ import.meta.env.VITE_ID
-      }&client_secret=${
-        import.meta.env.VITE_SECRET
-      }&redirect_uri=${currentUrl}?callback&code=${
-        route.query.code || ""
-      }&grant_type=authorization_code`;
-      const data = await fetch(getTokenUrl, {
-        method: "post",
-      });
-      const json = await data.json();
-      await localForage.setItem("access_token", json.access_token);
-      await localForage.setItem(
-        "expires_in",
-        (parseInt(json.expires_in) * 24 * 60 * 60 + Date.now()).toString()
-      );
-      await localForage.setItem("refresh_token", json.refresh_token);
-      router.push("/projects");
-    } catch (e) {
-      console.error(e);
-      errorMessage.value = "Something went wrong, please try again.";
-      open.value = true;
-    }
-  } else {
-    console.error("state mismatch");
-    errorMessage.value =
-      "State mismatch, can't trust the connection. Please try again.";
-    open.value = true;
-  }
-}
-init();
 </script>
 
 <template>
-  <mcw-snackbar
-    v-model="open"
-    :message="errorMessage"
-    :dismissAction="true"
-  ></mcw-snackbar>
+  <mcw-snackbar v-model="open" :message="errorMessage" :dismissAction="true"></mcw-snackbar>
   <article id="main">
     <h1>Figma-xr: Elevate Your Design Prototyping into the XR Realm</h1>
     <CTA></CTA>
@@ -81,28 +34,20 @@ init();
     <p>
       First, you need to connect to Figma. From which you can add your best projects. then, open one, and that's it !
     </p>
-   
+
   </article>
   <footer>
     <CTA></CTA>
 
     <div>
-     
-      <a
-        href="https://www.linkedin.com/in/arthur-mougin/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+
+      <a href="https://www.linkedin.com/in/arthur-mougin/" target="_blank" rel="noopener noreferrer">
         <mcw-button outlined>LinkedIn</mcw-button>
       </a>
-      <a
-        href="mailto:bonjour@arthurmoug.in"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <a href="mailto:bonjour@arthurmoug.in" target="_blank" rel="noopener noreferrer">
         <mcw-button outlined>Email</mcw-button>
       </a>
-      
+
     </div>
   </footer>
 </template>
@@ -120,7 +65,7 @@ article h2 {
   font-size: 1.75em;
 }
 
-article:not(:first-child) > * {
+article:not(:first-child)>* {
   max-width: 500px;
 }
 
@@ -166,7 +111,7 @@ footer div a {
 }
 
 footer .mdc-button--outlined {
-  --text : var(--primary);
+  --text: var(--primary);
   --mdc-outlined-button-outline-color: var(--primary);
 }
 </style>
