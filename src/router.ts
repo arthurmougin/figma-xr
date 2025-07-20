@@ -7,12 +7,6 @@ import { LogStateOptions } from "./definition.d";
 
 const routes = [
 	{
-		// http://localhost:5173/figma-xr/callback?code=IGYjKKLl17bMs3cGO3Ik9UeKl&state=sh1fq
-		path: "/figma-xr/callback",
-		name: "callback",
-		redirect: { name: "projects" },
-	},
-	{
 		path: "/figma-xr/home",
 		name: "landingpage",
 		component: LandingPageVue,
@@ -28,11 +22,11 @@ const routes = [
 		component: XRViewVue,
 		props: true,
 	},
-	/*{
+	{
 		path: "/:pathMatch(.*)*",
 		name: "notFound",
 		redirect: { name: "landingpage" },
-	},*/
+	},
 ];
 
 const router = createRouter({
@@ -41,21 +35,17 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from) => {
-	console.log(window.location.href);
-	console.log("to", to, "from", from);
 	const authStore = useAuthStore();
-	if (to.redirectedFrom?.path === "/figma-xr/callback") {
-		console.log("Callback route detected");
+
+	if (to.query.callback !== undefined) {
 		await authStore.initCallbackRoute(to);
 	}
 
 	if (to.name === "xrview" || to.name === "projects") {
 		//test if logged in
-		console.log(authStore.state === LogStateOptions["logged in"]);
 		if (authStore.state === LogStateOptions["logged in"]) {
 			return true;
 		} else {
-			console.log("User is not logged in");
 			return { name: "landingpage" };
 		}
 	}

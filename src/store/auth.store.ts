@@ -1,11 +1,12 @@
 import { defineStore } from "pinia";
 import { LogStateOptions, ProfileType } from "../definition.d";
 import { RouteLocationNormalized } from "vue-router";
+import { GetMeResponse } from "@figma/rest-api-spec";
 
 const callbackUrl =
 	new URL(window.location.href).origin +
 	import.meta.env.BASE_URL +
-	"/callback";
+	"?callback";
 export const useAuthStore = defineStore("auth", {
 	state: () => ({
 		profile: null as ProfileType | null,
@@ -33,7 +34,6 @@ export const useAuthStore = defineStore("auth", {
 			window.location.replace(url.toString());
 		},
 		async logout() {
-			console.log("Logging out...");
 			this.profile = null;
 			this.state = LogStateOptions["logged out"];
 			this.access_token = null;
@@ -47,7 +47,10 @@ export const useAuthStore = defineStore("auth", {
 			const headers = new Headers({
 				Authorization: `Bearer ${this.access_token || ""}`,
 			});
-			let data: any = {};
+			let data: Response = new Response("", {
+				status: 504,
+				statusText: "API call Error",
+			});
 
 			try {
 				data = await fetch("https://api.figma.com/v1/me", {
@@ -58,26 +61,30 @@ export const useAuthStore = defineStore("auth", {
 				console.warn(e);
 				this.logout();
 			} finally {
-				const json = await data.json();
-				console.log(json);
-				if (json.err) {
-					console.error(json.err);
+				//how to test if a variable is assigned
+				if (!data) {
+					console.error("Failed to fetch user data");
+					return;
+				}
+				console.log("me", data);
+				if (!data.ok) {
+					console.error(data);
 					this.logout();
 				}
-				this.profile = json;
+				const meResponse: GetMeResponse = await data.json();
+				console.log("me", meResponse);
+				this.profile = meResponse;
 			}
 		},
 		async initCallbackRoute(to: RouteLocationNormalized) {
 			try {
 				const state = to.query.state?.toString() || "";
-				console.log(state);
 				if (state !== this.figmaState) {
 					console.error("Invalid state");
 					this.logout();
 					return;
 				}
 
-				console.log(to, to.query.code);
 				const code = to.query.code?.toString() || "";
 
 				const getTokenUrl = new URL(
@@ -94,20 +101,15 @@ export const useAuthStore = defineStore("auth", {
 					`${import.meta.env.VITE_ID}:${import.meta.env.VITE_SECRET}`
 				);
 
-				const requestParameters: RequestInit = {
+				const options = {
 					method: "POST",
-					mode: "no-cors",
 					headers: {
+						authorization: `Basic ${credentials}`,
 						"content-type": "application/x-www-form-urlencoded",
-
-						Authorization: `Basic ${credentials}`,
 					},
 				};
-				console.log(requestParameters, getTokenUrl);
-				const data = await fetch(getTokenUrl, requestParameters);
-				console.log(data);
+				const data = await fetch(getTokenUrl.href, options);
 				const json = await data.json();
-				console.log(json);
 				this.access_token = json.access_token;
 				this.expires_in =
 					parseInt(json.expires_in) * 24 * 60 * 60 + Date.now();
