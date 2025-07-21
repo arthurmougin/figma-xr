@@ -6,13 +6,7 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import "./style.css";
 import App from "./App.vue";
 import router from "./router";
-import { Router } from "vue-router";
-
-declare module "pinia" {
-	export interface PiniaCustomProperties {
-		router: Router;
-	}
-}
+import "./definition.d";
 
 const pinia = createPinia();
 const app = createApp(App);

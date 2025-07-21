@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import CTA from "../components/CTA.vue";
-import { ref } from "vue";
-
-const errorMessage = ref("");
-const open = ref(false);
-
 </script>
 
 <template>
-  <mcw-snackbar v-model="open" :message="errorMessage" :dismissAction="true"></mcw-snackbar>
   <article id="main">
     <h1>Figma-xr: Elevate Your Design Prototyping into the XR Realm</h1>
     <CTA></CTA>

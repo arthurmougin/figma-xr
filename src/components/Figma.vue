@@ -9,9 +9,7 @@ useAuthStore().checkLogin();
     <router-link :to="{ name: 'projects' }">
       <h1 id="title">Figma XR</h1>
     </router-link>
-    <suspense>
-      <Profile />
-    </suspense>
+    <Profile />
   </mcw-top-app-bar>
   <main>
     <router-view></router-view>

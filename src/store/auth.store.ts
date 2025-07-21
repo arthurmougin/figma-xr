@@ -66,13 +66,11 @@ export const useAuthStore = defineStore("auth", {
 					console.error("Failed to fetch user data");
 					return;
 				}
-				console.log("me", data);
 				if (!data.ok) {
 					console.error(data);
 					this.logout();
 				}
 				const meResponse: GetMeResponse = await data.json();
-				console.log("me", meResponse);
 				this.profile = meResponse;
 			}
 		},
