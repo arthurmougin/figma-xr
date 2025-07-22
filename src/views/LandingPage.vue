@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CTA from "../components/CTA.vue";
+import { Button } from '@/components/ui/button';
 </script>
 
 <template>
@@ -36,76 +37,14 @@ import CTA from "../components/CTA.vue";
     <div>
 
       <a href="https://www.linkedin.com/in/arthur-mougin/" target="_blank" rel="noopener noreferrer">
-        <mcw-button outlined>LinkedIn</mcw-button>
+        <Button outlined>LinkedIn</Button>
       </a>
       <a href="mailto:bonjour@arthurmoug.in" target="_blank" rel="noopener noreferrer">
-        <mcw-button outlined>Email</mcw-button>
+        <Button outlined>Email</Button>
       </a>
 
     </div>
   </footer>
 </template>
 
-<style scoped>
-article {
-  padding: 4em 2rem;
-}
-
-article h1 {
-  font-size: 2em;
-}
-
-article h2 {
-  font-size: 1.75em;
-}
-
-article:not(:first-child)>* {
-  max-width: 500px;
-}
-
-article:not(:first-child):nth-child(2n + 1) {
-  text-align: end;
-  /* right: 0; */
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-article#main {
-  text-align: center;
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-}
-
-li {
-  margin: 1rem 0;
-}
-
-article h2 {
-  color: var(--accent);
-}
-
-footer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: var(--mdc-theme-on-primary);
-  color: white;
-}
-
-footer div {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-footer div a {
-  margin: 0 0.5rem;
-}
-
-footer .mdc-button--outlined {
-  --text: var(--primary);
-  --mdc-outlined-button-outline-color: var(--primary);
-}
-</style>
+<style scoped></style>

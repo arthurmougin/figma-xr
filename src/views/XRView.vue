@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue';
 import SceneManager from "../babylon/scenes/scene.ts";
 import { useProjectStore } from '../store/project.store.ts';
 import { TwickedFrameNode, PurgedProject } from '../definition';
+import { Button } from '@/components/ui/button';
 const props = defineProps<{
 	projectId: string
 }>()
@@ -47,8 +48,8 @@ project.value = useProjectStore().projects.get(props.projectId);
 		<canvas ref="bjsCanvas" :width="canvasSize.width * 2" :height="canvasSize.height * 2" touch-action="none" />
 		<section id="ui-container">
 			<ul class="frames-parent">
-				<li class="frames" v-for="frame in frames" :key="frame.id"><button
-						@click="() => sceneManager?.Spawn(frame)"><img :src="frame.image || ''" alt=""></button></li>
+				<li class="frames" v-for="frame in frames" :key="frame.id"><Button
+						@click="() => sceneManager?.Spawn(frame)"><img :src="frame.image || ''"></Button></li>
 			</ul>
 		</section>
 	</div>

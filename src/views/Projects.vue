@@ -2,6 +2,9 @@
 import { ref } from 'vue';
 import { useRouter } from "vue-router";
 import { useProjectStore } from '../store/project.store.ts';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import CardHeader from '@/components/ui/card/CardHeader.vue';
 
 const router = useRouter();
 const projectUrl = ref("");
@@ -28,26 +31,22 @@ function onAddProject() {
 <template>
 	<ul>
 		<li v-if="useProjectStore().projects" v-for="project in useProjectStore().projects?.values()">
-			<mcw-card>
-				<mcw-card-primary-action @click="router.push({ name: 'xrview', params: { projectId: project.id } })">
-					<mcw-card-media :src="project.thumbnailUrl" wide></mcw-card-media>
-				</mcw-card-primary-action>
-				<section>
-					<h2>{{ project.name }}</h2>
-				</section>
-				<mcw-card-actions>
-					<mcw-card-action-buttons>
-						<mcw-button raised
-							@click="router.push({ name: 'xrview', params: { projectId: project.id } })">Open</mcw-button>
-						<mcw-button outlined @click="useProjectStore().removeProject(project.id)">Delete </mcw-button>
-					</mcw-card-action-buttons>
-				</mcw-card-actions>
-			</mcw-card>
+			<Card>
+				<CardHeader>{{ project.name }}</CardHeader>
+				<CardContent>
+					<img :src="project.thumbnailUrl" wide></img>
+				</CardContent>
+				<CardFooter>
+					<Button raised
+						@click="router.push({ name: 'xrview', params: { projectId: project.id } })">Open</Button>
+					<Button outlined @click="useProjectStore().removeProject(project.id)">Delete </Button>
+				</CardFooter>
+			</Card>
 		</li>
 		<li id="add">
-			<a target="_blank" href="https://www.figma.com/files"><mcw-button outlined>Find projects you want to see in
-					XR</mcw-button></a>
-			<mcw-textfield v-model="projectUrl" :label="message ? message : 'And paste their link here'"
+			<a target="_blank" href="https://www.figma.com/files"><Button outlined>Find projects you want to see in
+					XR</Button></a>
+			<TextArea v-model="projectUrl" :placeholder="message ? message : 'And paste their link here'"
 				@input="(event: Event) => { projectUrl = (event.target as HTMLInputElement).value; onAddProject() }" />
 		</li>
 	</ul>

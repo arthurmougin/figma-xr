@@ -1,6 +1,8 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { fileURLToPath, URL } from "node:url";
+import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 
 // https://vitejs.dev/config/
@@ -10,6 +12,7 @@ export default defineConfig({
 		basicSsl({
 			name: "test",
 		}),
+		tailwindcss(),
 	],
 	server: {
 		https: {
@@ -20,7 +23,7 @@ export default defineConfig({
 	},
 	resolve: {
 		alias: {
-			"@": fileURLToPath(new URL("./src", import.meta.url)),
+			"@": path.resolve(__dirname, "./src"),
 		},
 	},
 	base: "/figma-xr",
