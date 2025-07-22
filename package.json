@@ -11,25 +11,26 @@
     "adb_connect": "adb reverse tcp:5173 tcp:5173"
   },
   "dependencies": {
-    "@babylonjs/core": "^8.9.1",
-    "@babylonjs/gui": "^8.9.1",
-    "@babylonjs/inspector": "^8.9.1",
-    "@babylonjs/loaders": "^8.9.1",
-    "@babylonjs/materials": "^8.9.1",
-    "@figma/rest-api-spec": "^0.30.0",
-    "buffer": "^6.0.3",
+    "@babylonjs/core": "^8.17.1",
+    "@babylonjs/gui": "^8.17.1",
+    "@babylonjs/inspector": "^8.17.1",
+    "@babylonjs/loaders": "^8.17.1",
+    "@babylonjs/materials": "^8.17.1",
+    "@figma/rest-api-spec": "^0.33.0",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "localforage": "^1.10.0",
-    "pinia": "^3.0.2",
-    "vue": "^3.3.4",
-    "vue-router": "^4.2.4"
+    "pinia": "^3.0.3",
+    "pinia-plugin-persistedstate": "^4.4.1",
+    "vue": "^3.5.17",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@types/node": "^20.5.6",
-    "@vitejs/plugin-vue": "^4.2.3",
-    "typescript": "^5.0.2",
-    "vite": "^4.4.5",
-    "vite-plugin-mkcert": "^1.16.0",
+    "@types/node": "^24.1.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.5",
+    "vite-plugin-mkcert": "^1.17.8",
     "vue-material-adapter": "^6.2.0",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^3.0.3"
   }
 }

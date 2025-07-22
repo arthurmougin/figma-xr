@@ -1,19 +1,48 @@
-import { GetFileResponse } from '@figma/rest-api-spec';
+import { GetFileResponse, FrameNode } from "@figma/rest-api-spec";
+import { Router } from "vue-router";
 
-export enum logStateOptions {
-    'not logged in',
-    'logging in',
-    'logged in',
-    'error'
+export enum LogStateOptions {
+	"logged out",
+	"logging in",
+	"logged in",
+	"error",
 }
 
-export type ProjectData = GetFileResponse & {
-    id:string
+export type ProfileType = {
+	id: string;
+	email: string;
+	handle: string;
+	img_url: string;
+};
+
+declare module "pinia" {
+	export interface PiniaCustomProperties {
+		router: Router;
+	}
 }
 
-export type FrameImage = {
-    id:string,
-    name:string,
-    image?:string
-}
-export type ProjectList = string[]
+export type Project = GetFileResponse & {
+	id: string;
+};
+
+//valid since FrameNode herit from AnnotationsTrait
+export type TwickedFrameNode = { id: string; image: string | null };
+
+export type PurgedProject = {
+	name: string;
+	lastModified: string;
+	thumbnailUrl?: string;
+	version: string;
+	id: string;
+	document: {
+		//canvas
+		children: {
+			//subcanvas, or frame as we call it
+			id: string;
+			children: {
+				id: string;
+				image: string | null;
+			}[];
+		}[];
+	};
+};

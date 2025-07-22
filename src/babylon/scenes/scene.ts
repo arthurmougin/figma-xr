@@ -1,58 +1,134 @@
-import { Engine, Scene, FreeCamera, Vector3, HemisphericLight, WebXRFeatureName } from "@babylonjs/core";
-import { FrameImage } from "../../definition";
-import "@babylonjs/loaders/glTF/2.0";
+import { AdvancedDynamicTexture } from "@babylonjs/gui/2D";
+import { XRManager } from "../xr-manager";
+import { TwickedFrameNode } from "../../definition";
+import {
+	Camera,
+	Color3,
+	DeviceOrientationCamera,
+	Engine,
+	HemisphericLight,
+	Mesh,
+	MeshBuilder,
+	MultiPointerScaleBehavior,
+	Scene,
+	SixDofDragBehavior,
+	StandardMaterial,
+	Texture,
+	Vector3,
+} from "@babylonjs/core";
+import { Inspector } from "@babylonjs/inspector";
 
-const createScene = async (canvas: HTMLCanvasElement) => {
-  const engine = new Engine(canvas);
-  const scene = new Scene(engine);
-
-  const camera = new FreeCamera("camera1", new Vector3(0, 5, -10), scene);
-  camera.setTarget(Vector3.Zero());
-  camera.attachControl(canvas, true);
-
-  new HemisphericLight("light", Vector3.Up(), scene);
-
-
-
-  // here we add XR support
-  const xr = await scene.createDefaultXRExperienceAsync({
-    disableTeleportation:true,
-    uiOptions: {
-      sessionMode: "immersive-ar",
-      requiredFeatures: ["anchors"],
-    }
-  });
-
-  xr.baseExperience.featuresManager.enableFeature(WebXRFeatureName.DOM_OVERLAY,"stable",{
-    element: ".html-ui"
-  }, undefined, true);
-
-  const anchorSystem = xr.baseExperience.featuresManager.getEnabledFeature(WebXRFeatureName.ANCHOR_SYSTEM);
-  console.log(xr, anchorSystem);
-
-
-
-
-
-
-
-
-
-
-
-  window.addEventListener('resize', () => engine.resize(true))
-
-  engine.runRenderLoop(() => {
-    scene.render();
-  });
-  
-  function sendToBabylonjs(data:FrameImage){
-    console.log(data);
-    // Send data to Babylon.js
-  }
-
-  return sendToBabylonjs
-
+// create button type that extends Control and add frame as property
+type MeshFrame = Mesh & {
+	frame?: TwickedFrameNode;
 };
 
-export { createScene };
+export class SceneManager {
+	UI?: AdvancedDynamicTexture;
+	engine: Engine;
+	scene: Scene;
+
+	xrManager: XRManager;
+	constructor(canvas: HTMLCanvasElement) {
+		var engine = new Engine(canvas, true, undefined, true);
+		var scene = new Scene(engine);
+		console.log(engine, scene, canvas);
+
+		this.engine = engine;
+		this.scene = scene;
+
+		// This creates and positions a free camera (non-mesh)
+		var camera = new DeviceOrientationCamera(
+			"camera1",
+			new Vector3(0, 5, -10),
+			scene
+		);
+
+		// This targets the camera to scene origin
+		camera.setTarget(Vector3.Zero());
+
+		// This attaches the camera to the canvas
+		camera.attachControl(canvas, true);
+		camera.speed = 0.1;
+		camera.minZ = 0.1;
+
+		// This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+		var light = new HemisphericLight("light1", new Vector3(0, 1, 0), scene);
+
+		// Default intensity is 1. Let's dim the light a small amount
+		light.intensity = 0.9;
+
+		const environment = scene.createDefaultEnvironment({
+			skyboxSize: 100,
+		});
+		if (environment) {
+			environment.setMainColor(Color3.FromHexString("#79ecec"));
+		}
+
+		engine.runRenderLoop(() => {
+			scene.render();
+		});
+
+		window.addEventListener("resize", function () {
+			engine.resize();
+		});
+
+		this.xrManager = new XRManager(this.scene);
+
+		// Debug
+		document.addEventListener("keydown", (event) => {
+			if (event.key === "i") {
+				if (this.scene.debugLayer.isVisible()) {
+					Inspector.Hide();
+				} else {
+					Inspector.Show(this.scene, {
+						overlay: true,
+						globalRoot: document.body,
+					});
+				}
+			}
+		});
+	}
+	async Spawn(frame: TwickedFrameNode) {
+		console.log("Spawning frame:", frame);
+		const scene = this.scene;
+		const canvas = scene?.getEngine().getRenderingCanvas();
+		if (!scene || !canvas || !frame.image) return;
+
+		//create a plane
+		const plane = MeshBuilder.CreatePlane(
+			"plane",
+			{ size: 0.125 },
+			scene
+		) as MeshFrame;
+		plane.frame = frame;
+
+		//set plane in front of camera
+		plane.position = new Vector3(0, 0, 0.5);
+		const camera = scene.activeCamera as Camera;
+		console.log(camera);
+		plane.parent = camera;
+		//then live it there as child of scene
+		plane.setParent(null);
+		this.xrManager.anchorChild(plane);
+
+		//set plane material to frame image as png with variable opacity
+		const material = new StandardMaterial("material", scene);
+		material.diffuseTexture = new Texture(plane.frame.image, scene);
+		material.diffuseTexture.hasAlpha = true;
+		material.alpha = 1;
+		plane.material = material;
+
+		//make movable
+		plane.isNearGrabbable = true;
+		plane.isNearPickable = true;
+		plane.isPickable = true;
+		const scaleBehavior = new MultiPointerScaleBehavior();
+		plane.addBehavior(scaleBehavior);
+
+		const dragBehavior = new SixDofDragBehavior();
+		plane.addBehavior(dragBehavior);
+	}
+}
+
+export default SceneManager;

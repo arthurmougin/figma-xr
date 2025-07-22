@@ -1,63 +1,56 @@
 <script lang="ts" setup>
-import { onMounted, Ref, ref, toRaw } from 'vue';
-import { fetchAllFigmaNodeFromProject, getProjectFromStorage } from "../utils";
-import { useRouter } from 'vue-router';
-import { createScene } from '../babylon/scenes/scene';
-import { FrameImage, ProjectData } from '../definition';
+import { onMounted, ref, watch } from 'vue';
+import SceneManager from "../babylon/scenes/scene.ts";
+import { useProjectStore } from '../store/project.store.ts';
+import { TwickedFrameNode, PurgedProject } from '../definition';
 const props = defineProps<{
 	projectId: string
 }>()
 
-const router = useRouter()
-const canvas = ref<HTMLCanvasElement | null>(null);
-const project: Ref<ProjectData> = ref({} as ProjectData);
-const frames = ref([] as FrameImage[]);
-const callToBabylon = ref<(data: FrameImage) => void>(() => {});
+const bjsCanvas = ref<HTMLCanvasElement | null>(null);
+const canvasSize = ref({ width: 200, height: 200 })
+const project = ref(undefined as PurgedProject | undefined);
+const frames = ref([] as TwickedFrameNode[]);
+const sceneManager = ref(undefined as SceneManager | undefined);
 
-
-async function init() {
-	const tmpProject = await getProjectFromStorage(props.projectId)
-	if (tmpProject) {
-		project.value = tmpProject;
-		frames.value = await fetchAllFigmaNodeFromProject(project.value) || []
+watch(project, async (project: PurgedProject | undefined) => {
+	if (project) {
+		frames.value = await useProjectStore().fetchAllFigmaNodeFromProject(project.id);
+		//sceneManager.value?.setFrames(frames.value);
 	}
-}
+})
 
 onMounted(async () => {
-	if (canvas.value) {
-		callToBabylon.value = await createScene(canvas.value)
+	if (bjsCanvas.value) {
+		sceneManager.value = new SceneManager(bjsCanvas.value);
+		updateSize()
 	}
 });
 
 
-init()
-
-const onPrimaryAction = (data : FrameImage) => {
-	console.log("Primary action triggered");
-	callToBabylon.value(toRaw(data));
+async function updateSize() {
+	const parent = bjsCanvas.value?.parentElement
+	if (parent) {
+		canvasSize.value.width = parent.clientWidth
+		canvasSize.value.height = parent.clientHeight - 1
+	}
+	sceneManager.value?.engine?.resize(true)
 }
+
+window.addEventListener('resize', updateSize)
+
+project.value = useProjectStore().projects.get(props.projectId);
 </script>
 
 <template>
 	<div class="bjs-canvas-container">
-		<canvas ref="canvas" />
-		<div class="html-ui">
-			<ul>
-				<template v-for="frame in frames">
-					<li v-if="frame.image">
-						<mcw-card>
-							<mcw-card-primary-action @click="onPrimaryAction(frame)">
-								<mcw-card-media :src="frame.image" square></mcw-card-media>
-							</mcw-card-primary-action>
-							<section>
-								<h3>{{ frame.name }}</h3>
-							</section>
-						</mcw-card>
-					</li>
-				</template>
+		<canvas ref="bjsCanvas" :width="canvasSize.width * 2" :height="canvasSize.height * 2" touch-action="none" />
+		<section id="ui-container">
+			<ul class="frames-parent">
+				<li class="frames" v-for="frame in frames" :key="frame.id"><button
+						@click="() => sceneManager?.Spawn(frame)"><img :src="frame.image || ''" alt=""></button></li>
 			</ul>
-			<mcw-button class="button" raised @click="router.go(-1)">&lt; Back</mcw-button>
-		</div>
+		</section>
 	</div>
 
 </template>
@@ -72,7 +65,6 @@ canvas {
 }
 
 .bjs-canvas-container {
-	position: relative;
 	width: 95%;
 	max-width: 70em;
 	height: 75vh;
@@ -85,41 +77,25 @@ canvas {
 	-webkit-tap-highlight-color: transparent;
 }
 
-
-.html-ui {
+#ui-container {
 	position: absolute;
-	left: 0;
-	right: 0;
 	bottom: 0;
-	padding: 0;
+	width: 100%;
+	overflow-x: scroll;
+	overflow-y: hidden;
 	display: flex;
+	align-items: flex-end;
 }
 
-.html-ui>button {
-	position: absolute;
-	margin: 1em;
-	bottom: -2em;
-}
-
-ul {
-	display: flex;
-	overflow-x: auto;
+.frames-parent {
 	padding: 1em;
-	flex-direction: row;
-	flex-wrap: nowrap;
-	align-items: center;
-}
-
-li {
 	display: flex;
-	padding: 0.5em;
+	flex-wrap: nowrap;
+	gap: 8px;
 }
 
-h3 {
-	padding: 0.5em;
-	width: 5em;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+.frames img {
+	width: 75px;
+	height: 75px;
 }
 </style>

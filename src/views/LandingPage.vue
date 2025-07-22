@@ -28,28 +28,20 @@ import CTA from "../components/CTA.vue";
     <p>
       First, you need to connect to Figma. From which you can add your best projects. then, open one, and that's it !
     </p>
-   
+
   </article>
   <footer>
     <CTA></CTA>
 
     <div>
-     
-      <a
-        href="https://www.linkedin.com/in/arthur-mougin/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+
+      <a href="https://www.linkedin.com/in/arthur-mougin/" target="_blank" rel="noopener noreferrer">
         <mcw-button outlined>LinkedIn</mcw-button>
       </a>
-      <a
-        href="mailto:bonjour@arthurmoug.in"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <a href="mailto:bonjour@arthurmoug.in" target="_blank" rel="noopener noreferrer">
         <mcw-button outlined>Email</mcw-button>
       </a>
-      
+
     </div>
   </footer>
 </template>
@@ -67,7 +59,7 @@ article h2 {
   font-size: 1.75em;
 }
 
-article:not(:first-child) > * {
+article:not(:first-child)>* {
   max-width: 500px;
 }
 
@@ -113,7 +105,7 @@ footer div a {
 }
 
 footer .mdc-button--outlined {
-  --text : var(--primary);
+  --text: var(--primary);
   --mdc-outlined-button-outline-color: var(--primary);
 }
 </style>
