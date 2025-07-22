@@ -1,82 +1,59 @@
-import * as BABYLON from "@babylonjs/core";
+import { AdvancedDynamicTexture } from "@babylonjs/gui/2D";
+import { XRManager } from "../xr-manager";
+import { TwickedFrameNode } from "../../definition";
 import {
-	AdvancedDynamicTexture,
-	Container,
-	Control,
-	Image,
-} from "@babylonjs/gui/2D";
-import * as GUI from "@babylonjs/gui";
+	Camera,
+	Color3,
+	DeviceOrientationCamera,
+	Engine,
+	HemisphericLight,
+	Mesh,
+	MeshBuilder,
+	MultiPointerScaleBehavior,
+	Scene,
+	SixDofDragBehavior,
+	StandardMaterial,
+	Texture,
+	Vector3,
+} from "@babylonjs/core";
+import { Inspector } from "@babylonjs/inspector";
 
 // create button type that extends Control and add frame as property
-class ButtonFrame extends Control {
-	frame?: any;
-}
-class MeshFrame extends BABYLON.Mesh {
-	frame?: any;
-}
-
-const xrPolyfillPromise = new Promise((resolve) => {
-	if (navigator.xr) {
-		return resolve(true);
-	}
-	if ((<any>window).WebXRPolyfill) {
-		//@ts-ignore
-		new WebXRPolyfill();
-		return resolve(true);
-	} else {
-		const url =
-			"https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.js";
-		const s = document.createElement("script");
-		s.src = url;
-		document.head.appendChild(s);
-		s.onload = () => {
-			//@ts-ignore
-			new WebXRPolyfill();
-			resolve(true);
-		};
-	}
-});
+type MeshFrame = Mesh & {
+	frame?: TwickedFrameNode;
+};
 
 export class SceneManager {
 	UI?: AdvancedDynamicTexture;
-	engine: BABYLON.Engine;
-	scene: BABYLON.Scene;
-	xrFeatures: {
-		webXRDefaultExperience?: BABYLON.WebXRDefaultExperience;
-		webXRAnchorSystem?: BABYLON.WebXRAnchorSystem;
-		xrBackgroundRemover?: BABYLON.IWebXRFeature;
-	} = {};
+	engine: Engine;
+	scene: Scene;
+
+	xrManager: XRManager;
 	constructor(canvas: HTMLCanvasElement) {
-		var engine = new BABYLON.Engine(canvas, true, undefined, true);
-		var scene = new BABYLON.Scene(engine);
+		var engine = new Engine(canvas, true, undefined, true);
+		var scene = new Scene(engine);
 		console.log(engine, scene, canvas);
 
 		this.engine = engine;
 		this.scene = scene;
 
-		this.Drop = this.Drop.bind(this);
-		this.Spawn = this.Spawn.bind(this);
-
 		// This creates and positions a free camera (non-mesh)
-		var camera = new BABYLON.DeviceOrientationCamera(
+		var camera = new DeviceOrientationCamera(
 			"camera1",
-			new BABYLON.Vector3(0, 5, -10),
+			new Vector3(0, 5, -10),
 			scene
 		);
 
 		// This targets the camera to scene origin
-		camera.setTarget(BABYLON.Vector3.Zero());
+		camera.setTarget(Vector3.Zero());
 
 		// This attaches the camera to the canvas
 		camera.attachControl(canvas, true);
 		camera.speed = 0.1;
+		camera.minZ = 0.1;
 
 		// This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-		var light = new BABYLON.HemisphericLight(
-			"light1",
-			new BABYLON.Vector3(0, 1, 0),
-			scene
-		);
+		var light = new HemisphericLight("light1", new Vector3(0, 1, 0), scene);
 
 		// Default intensity is 1. Let's dim the light a small amount
 		light.intensity = 0.9;
@@ -85,7 +62,7 @@ export class SceneManager {
 			skyboxSize: 100,
 		});
 		if (environment) {
-			environment.setMainColor(BABYLON.Color3.FromHexString("#79ecec"));
+			environment.setMainColor(Color3.FromHexString("#79ecec"));
 		}
 
 		engine.runRenderLoop(() => {
@@ -96,208 +73,61 @@ export class SceneManager {
 			engine.resize();
 		});
 
-		AdvancedDynamicTexture.ParseFromFileAsync(
-			new URL(window.location.href).origin +
-				import.meta.env.BASE_URL +
-				"/editor/guiTexture.json",
-			true
-		).then((UI: AdvancedDynamicTexture) => {
-			this.UI = UI;
-		});
+		this.xrManager = new XRManager(this.scene);
 
-		//create a HolographicButton;
-		const OpenButton = new GUI.HolographicButton("OpenButton", false);
-		OpenButton.text = "Open";
-		OpenButton.imageUrl = "../images/Button.png";
-
-		this.initXR();
-	}
-
-	async initXR() {
-		await xrPolyfillPromise;
-
-		const webXRDefaultExperience =
-			await this.scene.createDefaultXRExperienceAsync({
-				uiOptions: {
-					sessionMode: "immersive-ar",
-					referenceSpaceType: "unbounded",
-				},
-				disableTeleportation: true,
-				optionalFeatures: ["hit-test", "anchors", "light-estimation"],
-				disablePointerSelection: false,
-				pointerSelectionOptions: {
-					disablePointerUpOnTouchOut: false,
-					enablePointerSelectionOnAllControllers: true,
-				},
-			});
-		this.xrFeatures.webXRDefaultExperience = webXRDefaultExperience;
-
-		//set the advanced texture as plane attached to the XR camera when entering XR and set it back when exiting
-		// on enter in xr
-
-		const featuresManager =
-			webXRDefaultExperience.baseExperience.featuresManager;
-		const webXRAnchorSystem: BABYLON.WebXRAnchorSystem =
-			featuresManager.enableFeature(
-				BABYLON.WebXRAnchorSystem,
-				"latest"
-			) as BABYLON.WebXRAnchorSystem;
-		this.xrFeatures.webXRAnchorSystem = webXRAnchorSystem;
-
-		const xrBackgroundRemover = featuresManager.enableFeature(
-			BABYLON.WebXRBackgroundRemover,
-			"latest",
-			{
-				environmentHelperRemovalFlags: {
-					skyBox: true,
-					ground: true,
-				},
+		// Debug
+		document.addEventListener("keydown", (event) => {
+			if (event.key === "i") {
+				if (this.scene.debugLayer.isVisible()) {
+					Inspector.Hide();
+				} else {
+					Inspector.Show(this.scene, {
+						overlay: true,
+						globalRoot: document.body,
+					});
+				}
 			}
-		);
-		this.xrFeatures.xrBackgroundRemover = xrBackgroundRemover;
-	}
-	async setFrames(frames: any[]) {
-		if (!this.UI) return;
-		console.log(this.UI);
-		console.log(frames); //DropButton
-		const DropButton = this.UI.getControlByName(
-			"DropButton"
-		) as BABYLON.Nullable<Control>;
-		if (!DropButton) return;
-		DropButton.onPointerClickObservable.add(() => {
-			this.Drop();
 		});
-
-		const buttonTemplate = this.UI.getControlByName(
-			"Button"
-		) as BABYLON.Nullable<Control>;
-		if (!buttonTemplate) return;
-		const buttonParent = buttonTemplate.parent;
-
-		if (buttonTemplate.isVisible) {
-			buttonTemplate.isVisible = false;
-
-			frames.forEach((frame: any) => {
-				//console.log(frame.image)
-				const button = buttonTemplate.clone() as ButtonFrame;
-				button.isVisible = true;
-				const image = button.getDescendants()[0] as Image;
-				//console.log(button)
-				//console.log(image)
-				image.source = frame.image;
-				button.frame = frame;
-				button.onPointerDownObservable.add(() => {
-					console.log("down");
-				});
-				button.onPointerUpObservable.add(() => {
-					console.log("up");
-				});
-				button.onPointerEnterObservable.add(() => {
-					console.log("enter");
-				});
-				button.onPointerOutObservable.add(() => {
-					console.log("out");
-				});
-				button.onPointerMoveObservable.add(() => {
-					console.log("move");
-				});
-				button.onPointerClickObservable.add(() => {
-					console.log("spawn");
-					this.Spawn(button.frame);
-				});
-				//button.isPointerBlocker = true;
-				buttonParent?.addControl(button);
-			});
-		}
 	}
-	async Spawn(frame: any) {
+	async Spawn(frame: TwickedFrameNode) {
+		console.log("Spawning frame:", frame);
 		const scene = this.scene;
-		const UI = this.UI;
 		const canvas = scene?.getEngine().getRenderingCanvas();
-		console.log(scene, UI, canvas);
-		if (!scene || !UI || !canvas) return;
-
-		//edit UI
-		const Root = UI.getChildren()[0];
-		const rect = Root.getChildByName("Rectangle") as Container;
-		if (!rect) return;
-		const Drop = rect.getChildByName("Drop");
-		const Spawn = rect.getChildByName("Spawn");
-		if (!Drop || !Spawn) return;
-		Drop.isVisible = true;
-		Spawn.isVisible = false;
+		if (!scene || !canvas || !frame.image) return;
 
 		//create a plane
-		const plane = BABYLON.MeshBuilder.CreatePlane(
+		const plane = MeshBuilder.CreatePlane(
 			"plane",
-			{ size: 0.5 },
+			{ size: 0.125 },
 			scene
 		) as MeshFrame;
 		plane.frame = frame;
 
 		//set plane in front of camera
-		plane.position = new BABYLON.Vector3(0, 0, 2);
-		const camera = scene.activeCamera as BABYLON.Camera;
+		plane.position = new Vector3(0, 0, 0.5);
+		const camera = scene.activeCamera as Camera;
+		console.log(camera);
 		plane.parent = camera;
+		//then live it there as child of scene
+		plane.setParent(null);
+		this.xrManager.anchorChild(plane);
 
 		//set plane material to frame image as png with variable opacity
-		const material = new BABYLON.StandardMaterial("material", scene);
-		material.diffuseTexture = new BABYLON.Texture(plane.frame.image, scene);
+		const material = new StandardMaterial("material", scene);
+		material.diffuseTexture = new Texture(plane.frame.image, scene);
 		material.diffuseTexture.hasAlpha = true;
 		material.alpha = 1;
 		plane.material = material;
-		//resize plane to match image aspect ratio
-		const aspectRatio =
-			plane.frame.absoluteRenderBounds.width /
-			plane.frame.absoluteRenderBounds.height;
-		plane.scaling.x = aspectRatio;
-	}
-	async Drop() {
-		const scene = this.scene;
-		const webXRDefaultExperience = this.xrFeatures.webXRDefaultExperience;
-		const webXRAnchorSystem = this.xrFeatures.webXRAnchorSystem;
-		const UI = this.UI;
-		const canvas = scene?.getEngine().getRenderingCanvas();
-		if (
-			!scene ||
-			!webXRDefaultExperience ||
-			!webXRAnchorSystem ||
-			!UI ||
-			!canvas
-		)
-			return;
 
-		//edit UI
-		const Root = UI.getChildren()[0];
-		const rect = Root.getChildByName("Rectangle") as Container;
-		if (!rect) return;
-		const Drop = rect.getChildByName("Drop");
-		const Spawn = rect.getChildByName("Spawn");
-		if (!Drop || !Spawn) return;
-		Drop.isVisible = false;
-		Spawn.isVisible = true;
+		//make movable
+		plane.isNearGrabbable = true;
+		plane.isNearPickable = true;
+		plane.isPickable = true;
+		const scaleBehavior = new MultiPointerScaleBehavior();
+		plane.addBehavior(scaleBehavior);
 
-		//get active camera
-		const camera = scene.activeCamera as BABYLON.Camera;
-		const camChild = camera.getChildren()[0] as MeshFrame;
-		camChild.setParent(null);
-		if (
-			webXRDefaultExperience.baseExperience.state ===
-			BABYLON.WebXRState.IN_XR
-		) {
-			try {
-				const anchor =
-					await webXRAnchorSystem.addAnchorAtPositionAndRotationAsync(
-						camChild.position,
-						camChild.rotationQuaternion
-							? camChild.rotationQuaternion
-							: camChild.rotation.toQuaternion()
-					);
-				anchor.attachedNode = camChild;
-			} catch (e) {
-				console.warn(e);
-			}
-		}
+		const dragBehavior = new SixDofDragBehavior();
+		plane.addBehavior(dragBehavior);
 	}
 }
 

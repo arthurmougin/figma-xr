@@ -2,7 +2,7 @@
 import { onMounted, ref, watch } from 'vue';
 import SceneManager from "../babylon/scenes/scene.ts";
 import { useProjectStore } from '../store/project.store.ts';
-import { ExtendedFrameNode, PurgedProject } from '../definition';
+import { TwickedFrameNode, PurgedProject } from '../definition';
 const props = defineProps<{
 	projectId: string
 }>()
@@ -10,13 +10,13 @@ const props = defineProps<{
 const bjsCanvas = ref<HTMLCanvasElement | null>(null);
 const canvasSize = ref({ width: 200, height: 200 })
 const project = ref(undefined as PurgedProject | undefined);
-const frames = ref([] as ExtendedFrameNode[]);
+const frames = ref([] as TwickedFrameNode[]);
 const sceneManager = ref(undefined as SceneManager | undefined);
 
 watch(project, async (project: PurgedProject | undefined) => {
 	if (project) {
 		frames.value = await useProjectStore().fetchAllFigmaNodeFromProject(project.id);
-		sceneManager.value?.setFrames(frames.value);
+		//sceneManager.value?.setFrames(frames.value);
 	}
 })
 
@@ -38,13 +38,19 @@ async function updateSize() {
 }
 
 window.addEventListener('resize', updateSize)
-const tmpProject = useProjectStore().projects.get(props.projectId)
-if (tmpProject) project.value = tmpProject;
+
+project.value = useProjectStore().projects.get(props.projectId);
 </script>
 
 <template>
 	<div class="bjs-canvas-container">
 		<canvas ref="bjsCanvas" :width="canvasSize.width * 2" :height="canvasSize.height * 2" touch-action="none" />
+		<section id="ui-container">
+			<ul class="frames-parent">
+				<li class="frames" v-for="frame in frames" :key="frame.id"><button
+						@click="() => sceneManager?.Spawn(frame)"><img :src="frame.image || ''" alt=""></button></li>
+			</ul>
+		</section>
 	</div>
 </template>
 
@@ -68,5 +74,27 @@ canvas {
 	box-shadow: 0px 0px 10px #0000005c;
 	touch-action: none;
 	-webkit-tap-highlight-color: transparent;
+}
+
+#ui-container {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+	overflow-x: scroll;
+	overflow-y: hidden;
+	display: flex;
+	align-items: flex-end;
+}
+
+.frames-parent {
+	padding: 1em;
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 8px;
+}
+
+.frames img {
+	width: 75px;
+	height: 75px;
 }
 </style>

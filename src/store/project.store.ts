@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ExtendedFrameNode, Project, PurgedProject } from "../definition.d";
+import { TwickedFrameNode, Project, PurgedProject } from "../definition.d";
 import { useAuthStore } from "./auth.store";
 import { GetImagesResponse } from "@figma/rest-api-spec";
 const regex =
@@ -41,7 +41,7 @@ export const useProjectStore = defineStore("project", {
 			});
 		},
 		async fetchAllFigmaNodeFromProject(projectId: string) {
-			return new Promise<ExtendedFrameNode[]>(async (resolve, reject) => {
+			return new Promise<TwickedFrameNode[]>(async (resolve, reject) => {
 				const project: PurgedProject | undefined =
 					this.projects.get(projectId);
 				if (!project) return reject("Project not found");
@@ -132,6 +132,7 @@ async function fetchProject(id: string): Promise<PurgedProject | null> {
 					id: child.id,
 					children: child.children.map((grandchild) => ({
 						id: grandchild.id,
+						image: null,
 					})),
 				})),
 			},

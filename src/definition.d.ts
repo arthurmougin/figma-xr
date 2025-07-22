@@ -26,7 +26,7 @@ export type Project = GetFileResponse & {
 };
 
 //valid since FrameNode herit from AnnotationsTrait
-export type ExtendedFrameNode = { id: string; image?: string };
+export type TwickedFrameNode = { id: string; image: string | null };
 
 export type PurgedProject = {
 	name: string;
@@ -41,7 +41,7 @@ export type PurgedProject = {
 			id: string;
 			children: {
 				id: string;
-				image?: string;
+				image: string | null;
 			}[];
 		}[];
 	};

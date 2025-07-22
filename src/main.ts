@@ -3,7 +3,7 @@ import { createPinia } from "pinia";
 import VueMaterialAdapter from "vue-material-adapter";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 
-import "./style.css";
+import "./styles/style.css";
 import App from "./App.vue";
 import router from "./router";
 import "./definition.d";

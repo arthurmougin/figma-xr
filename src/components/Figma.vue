@@ -24,6 +24,7 @@ useAuthStore().checkLogin();
   top: 0;
   position: sticky;
   padding: 0.5em;
+  z-index: auto;
 }
 
 h1#title {
