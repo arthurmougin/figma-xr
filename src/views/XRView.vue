@@ -48,7 +48,7 @@ project.value = useProjectStore().projects.get(props.projectId);
 		<section id="ui-container">
 			<ul class="frames-parent">
 				<li class="frames" v-for="frame in frames" :key="frame.id"><button
-						@click="() => sceneManager?.Spawn(frame)"><img :src="frame.image || ''" alt=""></button></li>
+						@click="() => sceneManager?.Spawn(frame)"><img :src="frame.image || ''"></button></li>
 			</ul>
 		</section>
 	</div>
