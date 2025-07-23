@@ -98,6 +98,10 @@ export const useProjectStore = defineStore("project", () => {
 		});
 	}
 
+	async function clearAllProjects() {
+		projects.value.clear();
+	}
+
 	watch(
 		projects,
 		() => {
@@ -118,6 +122,7 @@ export const useProjectStore = defineStore("project", () => {
 		updateProject,
 		refreshOnLoad,
 		fetchAllFigmaNodeFromProject,
+		clearAllProjects,
 	};
 });
 

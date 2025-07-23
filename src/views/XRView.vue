@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue';
 import SceneManager from "../babylon/scenes/scene.ts";
 import { useProjectStore } from '../store/project.store.ts';
 import { TwickedFrameNode, PurgedProject } from '../definition';
+import { Skeleton } from '@/components/ui/skeleton';
 const props = defineProps<{
 	projectId: string
 }>()
@@ -13,8 +14,6 @@ const project = ref(undefined as PurgedProject | undefined);
 const frames = ref([] as TwickedFrameNode[]);
 const sceneManager = ref(undefined as SceneManager | undefined);
 
-project.value = useProjectStore().projects.get(props.projectId);
-frames.value = project.value?.document.children[0].children as TwickedFrameNode[];
 
 watch(project, async (project: PurgedProject | undefined) => {
 	if (project) {
@@ -41,7 +40,9 @@ async function updateSize() {
 }
 
 window.addEventListener('resize', updateSize)
-
+project.value = useProjectStore().projects.get(props.projectId);
+frames.value = project.value?.document.children[0].children as TwickedFrameNode[];
+console.log(frames.value)
 </script>
 
 <template>
@@ -50,9 +51,10 @@ window.addEventListener('resize', updateSize)
 	<section id="ui-container" class="flex absolute w-full bottom-0 overflow-x-auto overflow-y-hidden">
 		<ul class="frames-parent flex flex-nowrap gap-4 px-4 py-2 items-center justify-center">
 			<li class="frames" v-for="frame in frames" :key="frame.id">
-				<button class="w-max" @click="() => sceneManager?.Spawn(frame)">
+				<button v-if="frame.image" class="w-max" @click="() => sceneManager?.Spawn(frame)">
 					<img :src="frame.image || ''">
 				</button>
+				<Skeleton v-else class="h-19 w-19 rounded-full" />
 			</li>
 		</ul>
 	</section>

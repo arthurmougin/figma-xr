@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 const router = useRouter();
+const projectStore = useProjectStore();
 const projectUrl = ref("");
 const message = ref("");
 
@@ -16,7 +17,7 @@ function onAddProject() {
 		return;
 	}
 	message.value = "Loading...";
-	useProjectStore().addProject(projectUrl.value)
+	projectStore.addProject(projectUrl.value)
 		.then(() => {
 			message.value = "Project added successfully!";
 			projectUrl.value = "";
@@ -30,7 +31,7 @@ function onAddProject() {
 
 <template>
 	<ul class="min-h-full flex flex-wrap p-5 pt-20 justify-center align-center items-center space-x-4 space-y-4">
-		<li v-if="useProjectStore().projects" v-for="project in useProjectStore().projects?.values()">
+		<li v-if="projectStore.projects" v-for="project in projectStore.projects?.values()">
 			<Card>
 				<CardContent class="">
 					<img :src="project.thumbnailUrl" class="w-50 h-auto"></img>
@@ -40,7 +41,7 @@ function onAddProject() {
 					<div class="flex justify-between w-full">
 						<Button raised
 							@click=" router.push({ name: 'xrview', params: { projectId: project.id } })">Open</Button>
-						<Button outlined @click="useProjectStore().removeProject(project.id)">Delete </Button>
+						<Button outlined @click="projectStore.removeProject(project.id)">Delete </Button>
 					</div>
 				</CardFooter>
 			</Card>

@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { LogStateOptions, ProfileType } from "../definition.d";
 import { RouteLocationNormalized } from "vue-router";
 import { GetMeResponse } from "@figma/rest-api-spec";
+import { useProjectStore } from "./project.store";
 
 const callbackUrl =
 	new URL(window.location.href).origin +
@@ -18,11 +19,6 @@ export const useAuthStore = defineStore("auth", {
 	}),
 	actions: {
 		async login() {
-			console.log(
-				"Logging in...",
-				import.meta.env,
-				import.meta.env.VITE_ID
-			);
 			const figmaState = Math.random().toString(36).substring(7);
 			this.figmaState = figmaState;
 			const url = new URL(`https://www.figma.com/oauth`);
@@ -45,6 +41,7 @@ export const useAuthStore = defineStore("auth", {
 			this.expires_in = null;
 			this.refresh_token = null;
 			this.figmaState = null;
+			useProjectStore().clearAllProjects();
 
 			this.router.push({ name: "landingpage" });
 		},

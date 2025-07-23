@@ -81,7 +81,10 @@ export class XRManager {
 		const webXRAnchorSystem: WebXRAnchorSystem =
 			featuresManager.enableFeature(
 				WebXRAnchorSystem,
-				"latest"
+				"latest",
+				{},
+				true,
+				false
 			) as WebXRAnchorSystem;
 		this.xrFeatures.webXRAnchorSystem = webXRAnchorSystem;
 
@@ -113,7 +116,9 @@ export class XRManager {
 			{
 				setSceneEnvironmentTexture: true,
 				createDirectionalLightSource: true,
-			}
+			},
+			true,
+			false
 		);
 		this.xrFeatures.webXRLightEstimation =
 			lightEstimation as WebXRLightEstimation;
@@ -125,7 +130,9 @@ export class XRManager {
 				dataFormatPreference: ["ushort", "float"],
 				usagePreference: ["cpu", "gpu"],
 				disableDepthSensingOnMaterials: false,
-			}
+			},
+			true,
+			false
 		);
 		this.xrFeatures.webXRDepthSensing = depthSensing as WebXRDepthSensing;
 
