@@ -114,10 +114,21 @@ export class SceneManager {
 
 		//set plane material to frame image as png with variable opacity
 		const material = new StandardMaterial("material", scene);
-		material.diffuseTexture = new Texture(plane.frame.image, scene);
+		material.diffuseTexture = new Texture(frame.image, scene);
 		material.diffuseTexture.hasAlpha = true;
 		material.alpha = 1;
 		plane.material = material;
+
+		(material.diffuseTexture as Texture).onLoadObservable.add((e) => {
+			console.log(material?.diffuseTexture?._texture?.baseHeight);
+			console.log(material?.diffuseTexture?._texture?.baseWidth);
+
+			const aspectRatio =
+				(material?.diffuseTexture?._texture?.baseWidth || 1) /
+				(material?.diffuseTexture?._texture?.baseHeight || 1);
+			console.log("Aspect Ratio:", aspectRatio);
+			plane.scaling = new Vector3(aspectRatio, 1, 1);
+		});
 
 		//make movable
 		plane.isNearGrabbable = true;

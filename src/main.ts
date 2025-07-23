@@ -1,6 +1,5 @@
 import { createApp, markRaw } from "vue";
 import { createPinia } from "pinia";
-import VueMaterialAdapter from "vue-material-adapter";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 
 import "./styles/style.css";
@@ -10,7 +9,6 @@ import "./definition.d";
 
 const pinia = createPinia();
 const app = createApp(App);
-app.use(VueMaterialAdapter);
 app.use(router);
 
 pinia.use(({ store }) => {

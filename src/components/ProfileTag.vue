@@ -7,12 +7,11 @@ import { Avatar, AvatarImage } from '@/components/ui/avatar';
 
 <template>
 	<MenubarMenu>
-		<MenubarTrigger>
-			<Avatar>
+		<MenubarTrigger class="flex items-center space-x-2">
+			<Avatar v-if="useAuthStore().profile?.img_url">
 				<AvatarImage :src="useAuthStore().profile?.img_url || ''" />
 			</Avatar>
-			<p v-if="useAuthStore().profile?.handle">{{ useAuthStore().profile?.handle }}</p>
-			<p v-else>Account</p>
+			<p>{{ useAuthStore().profile?.handle || "Account" }}</p>
 		</MenubarTrigger>
 		<MenubarContent>
 			<MenubarItem v-if="useAuthStore().state === LogStateOptions['logged in']" @click="useAuthStore().logout">

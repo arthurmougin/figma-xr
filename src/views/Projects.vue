@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { useProjectStore } from '../store/project.store.ts';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import CardHeader from '@/components/ui/card/CardHeader.vue';
+import { Textarea } from '@/components/ui/textarea';
 
 const router = useRouter();
 const projectUrl = ref("");
@@ -29,65 +29,29 @@ function onAddProject() {
 </script>
 
 <template>
-	<ul>
+	<ul class="min-h-full flex flex-wrap p-5 pt-20 justify-center align-center items-center space-x-4 space-y-4">
 		<li v-if="useProjectStore().projects" v-for="project in useProjectStore().projects?.values()">
 			<Card>
-				<CardHeader>{{ project.name }}</CardHeader>
-				<CardContent>
-					<img :src="project.thumbnailUrl" wide></img>
+				<CardContent class="">
+					<img :src="project.thumbnailUrl" class="w-50 h-auto"></img>
 				</CardContent>
-				<CardFooter>
-					<Button raised
-						@click="router.push({ name: 'xrview', params: { projectId: project.id } })">Open</Button>
-					<Button outlined @click="useProjectStore().removeProject(project.id)">Delete </Button>
+				<CardFooter class="flex-col items-start">
+					<p class="font-bold text-2xl ">{{ project.name }}</p>
+					<div class="flex justify-between w-full">
+						<Button raised
+							@click=" router.push({ name: 'xrview', params: { projectId: project.id } })">Open</Button>
+						<Button outlined @click="useProjectStore().removeProject(project.id)">Delete </Button>
+					</div>
 				</CardFooter>
 			</Card>
 		</li>
-		<li id="add">
+		<li id="add" class="flex flex-col text-center align-center justify-center space-y-2 ">
 			<a target="_blank" href="https://www.figma.com/files"><Button outlined>Find projects you want to see in
 					XR</Button></a>
-			<TextArea v-model="projectUrl" :placeholder="message ? message : 'And paste their link here'"
+			<Textarea v-model="projectUrl" :placeholder="message ? message : 'And paste their link here'"
 				@input="(event: Event) => { projectUrl = (event.target as HTMLInputElement).value; onAddProject() }" />
 		</li>
 	</ul>
-
 </template>
 
-<style scoped>
-ul {
-	list-style: none;
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	align-content: center;
-	justify-content: center;
-	align-items: center;
-	margin: 0;
-	padding: 0;
-}
-
-li {
-	margin: 1em;
-}
-
-.mdc-card__action-buttons>*:first-child {
-	margin-right: 0.5em;
-}
-
-#add {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-}
-
-#add>* {
-	margin: 0.5em;
-}
-
-.mdc-button--outlined {
-	padding: 0.5em;
-	position: relative;
-	box-sizing: content-box;
-}
-</style>
+<style scoped></style>

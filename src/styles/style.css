@@ -1,13 +1,9 @@
+
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-
-*,
-*:before,
-*:after {
-  box-sizing: inherit;
-}
 
 body {
   margin: 0;

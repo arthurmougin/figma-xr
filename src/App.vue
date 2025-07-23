@@ -4,7 +4,7 @@ import { Menubar, MenubarMenu, MenubarTrigger } from '@/components/ui/menubar';
 </script>
 
 <template>
-  <Menubar class="mdc-top-app-bar--fixed">
+  <Menubar class="absolute top-0 p-0 left-0 right-0 z-50 w-full inline-flex justify-between box-border ">
     <MenubarMenu>
       <MenubarTrigger>
         <router-link :to="{ name: 'projects' }">
@@ -14,13 +14,9 @@ import { Menubar, MenubarMenu, MenubarTrigger } from '@/components/ui/menubar';
     </MenubarMenu>
     <ProfileTag />
   </Menubar>
-  <main>
+  <main class="min-h-dvh">
     <router-view></router-view>
   </main>
 </template>
 
-<style scoped>
-main {
-  margin-top: 1em;
-}
-</style>
+<style scoped></style>
