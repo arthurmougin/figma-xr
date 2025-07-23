@@ -34,7 +34,7 @@ const router = createRouter({
 	routes,
 });
 
-router.beforeEach(async (to, from) => {
+router.beforeEach(async (to, _from) => {
 	const authStore = useAuthStore();
 
 	if (to.query.callback !== undefined) {

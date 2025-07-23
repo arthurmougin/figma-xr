@@ -119,7 +119,7 @@ export class SceneManager {
 		material.alpha = 1;
 		plane.material = material;
 
-		(material.diffuseTexture as Texture).onLoadObservable.add((e) => {
+		(material.diffuseTexture as Texture).onLoadObservable.add(() => {
 			console.log(material?.diffuseTexture?._texture?.baseHeight);
 			console.log(material?.diffuseTexture?._texture?.baseWidth);
 
