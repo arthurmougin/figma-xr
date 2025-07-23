@@ -40,8 +40,8 @@ jobs:
             - name: Build
               run: npm run build
               env:
-                  VITE_FIGMA_CLIENT_ID: ${{ secrets.VITE_FIGMA_CLIENT_ID }}
-                  VITE_FIGMA_SECRET: ${{ secrets.VITE_FIGMA_SECRET }}
+                  VITE_ID: ${{ secrets.VITE_ID }}
+                  VITE_SECRET: ${{ secrets.VITE_SECRET }}
             - name: Setup Pages
               uses: actions/configure-pages@v5
             - name: Upload artifact
