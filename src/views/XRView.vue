@@ -3,7 +3,6 @@ import { onMounted, ref, watch } from 'vue';
 import SceneManager from "../babylon/scenes/scene.ts";
 import { useProjectStore } from '../store/project.store.ts';
 import { TwickedFrameNode, PurgedProject } from '../definition';
-import { Button } from '@/components/ui/button';
 const props = defineProps<{
 	projectId: string
 }>()
