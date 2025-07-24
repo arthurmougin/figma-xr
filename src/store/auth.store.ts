@@ -140,9 +140,10 @@ export const useAuthStore = defineStore("auth", {
 			}
 		},
 
+		// Retry a function with the current refresh token with the appropriate parameters
 		async refreshTokenAndRetry(
-			functionToRetry?: (parameter?: any) => any,
-			parameter?: any
+			functionToRetry?: ((...args: any[]) => Promise<any>) | undefined,
+			...parameters: any[]
 		): Promise<any> {
 			if (!this.refresh_token) {
 				this.logout();
@@ -190,7 +191,7 @@ export const useAuthStore = defineStore("auth", {
 				this.lastRetry = Date.now();
 
 				return functionToRetry
-					? await functionToRetry(parameter)
+					? await functionToRetry(...parameters)
 					: null;
 			} catch (e) {
 				this.logout();

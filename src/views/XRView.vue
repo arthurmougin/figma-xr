@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import SceneManager from "../babylon/scenes/scene.ts";
 import { useProjectStore } from '../store/project.store.ts';
-import { TwickedFrameNode } from '../definition';
 import { Skeleton } from '@/components/ui/skeleton';
 import { storeToRefs } from 'pinia';
 const props = defineProps<{
@@ -12,12 +11,13 @@ const props = defineProps<{
 const bjsCanvas = ref<HTMLCanvasElement | null>(null);
 const { projects } = storeToRefs(useProjectStore());
 const project = computed(() => projects.value.get(props.projectId));
-const frames = computed(() => project.value?.document.children[0].children as TwickedFrameNode[]);
+const frames = computed(() => project.value?.images ? Array.from(project.value?.images.values()) : []);
+
 const sceneManager = ref<SceneManager | undefined>(undefined);
 
-if ((!frames.value || !frames.value[0].image) && project.value?.id) {
+if ((!frames.value || !frames.value[0] || !frames.value[0].image) && project.value?.id) {
 	console.log("fetching images on first load");
-	useProjectStore().fetchAllFigmaNodeFromProject(project.value.id);
+	useProjectStore().populateAllImagesFromProject(project.value.id);
 }
 
 //if( project changed)
@@ -25,7 +25,7 @@ watch(project, async (value, oldValue) => {
 	console.log("Project changed");
 	if (value?.id && value.id !== oldValue?.id) {
 		console.log("Fetching frames for project:", value.id);
-		await useProjectStore().fetchAllFigmaNodeFromProject(value.id);
+		await useProjectStore().populateAllImagesFromProject(value.id);
 	}
 });
 

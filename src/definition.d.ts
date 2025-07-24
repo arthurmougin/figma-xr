@@ -34,15 +34,5 @@ export type PurgedProject = {
 	thumbnailUrl?: string;
 	version: string;
 	id: string;
-	document: {
-		//canvas
-		children: {
-			//subcanvas, or frame as we call it
-			id: string;
-			children: {
-				id: string;
-				image: string | null;
-			}[];
-		}[];
-	};
+	images: Map<string, TwickedFrameNode>;
 };
