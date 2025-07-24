@@ -17,3 +17,9 @@ pinia.use(({ store }) => {
 pinia.use(piniaPluginPersistedstate);
 app.use(pinia);
 app.mount("#app");
+
+const path = localStorage.getItem("path");
+if (path) {
+	localStorage.removeItem("path");
+	router.push(path);
+}

@@ -7,17 +7,17 @@ import { LogStateOptions } from "./definition.d";
 
 const routes = [
 	{
-		path: "/figma-xr/home",
+		path: import.meta.env.BASE_URL + "/",
 		name: "landingpage",
 		component: LandingPageVue,
 	},
 	{
-		path: "/figma-xr/projects",
+		path: import.meta.env.BASE_URL + "/projects",
 		name: "projects",
 		component: ProjectsVue,
 	},
 	{
-		path: "/figma-xr/view/:projectId",
+		path: import.meta.env.BASE_URL + "/view/:projectId",
 		name: "xrview",
 		component: XRViewVue,
 		props: true,
@@ -33,7 +33,6 @@ const router = createRouter({
 	history: createWebHistory(),
 	routes,
 });
-
 router.beforeEach(async (to, _from) => {
 	const authStore = useAuthStore();
 
