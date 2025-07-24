@@ -65,109 +65,36 @@ export const useProjectStore = defineStore("project", () => {
 	function refreshOnLoad() {
 		projects.value.forEach((element) => {
 			fetchProject(element.id).then((data) => {
-				if (data) {
-					updateProject(data);
-				} else {
+				if (!data) {
 					removeProject(element.id);
+				}
+
+				const storedProject = useProjectStore().projects.get(
+					element.id
+				);
+				if (!storedProject || storedProject.version !== data.version) {
+					updateProject(data);
 				}
 			});
 		});
 	}
-	async function populateAllImagesFromProject(
-		projectId: string
-	): Promise<Map<string, TwickedFrameNode>> {
-		console.log("init fetchAllFigmaNodeFromProject");
-		const project: PurgedProject | undefined =
-			projects.value.get(projectId);
-		if (!project) throw new Error("Project not found");
 
-		const frames: Map<string, TwickedFrameNode> = project.images;
-		const framesArray = Array.from(frames.values());
-
-		const headers = new Headers({
-			Authorization: `Bearer ${await useAuthStore().access_token}`,
-		});
-
-		let imageResponse: GetImagesResponse;
-		console.log(
-			"Fetching images url for frames:",
-			framesArray.map((frame) => frame.id)
-		);
-		try {
-			//list all ids as a string split by commas
-			let ids = framesArray.map((frame) => frame.id).join(",");
-			const response = await fetch(
-				`https://api.figma.com/v1/images/${project.id}?ids=${ids}&format=png&scale=1`,
-				{
-					method: "get",
-					headers,
-				}
-			);
-			imageResponse = await response.json();
-
-			if (imageResponse.err) throw new Error(imageResponse.err);
-		} catch (e) {
-			console.error(e);
-			return await useAuthStore().refreshTokenAndRetry(
-				populateAllImagesFromProject,
-				project.id
-			);
-		}
-		console.log(
-			"Fetched images url for frames:",
-			Array.from(frames.values()).map((frame) => frame.id)
-		);
-
-		await Promise.all(
-			framesArray.map(async (frame) => {
-				const image = imageResponse.images[frame.id];
-				if (image) {
-					frame.image = await imgUrltoBase64(image);
-					console.log("converted image for frame:", frame.id);
-				}
-				frames.set(frame.id, frame);
-			})
-		);
-		project.images = frames;
-		updateProject(project);
-
-		return frames;
-	}
-
-	async function populateImagesFromProjectPaginated(
+	async function populateImagesFromProject(
 		projectId: string,
-		pageNumber: number,
-		pageQuantity: number = 5
+		idList: string[]
 	) {
 		const project = projects.value.get(projectId);
 		if (!project) throw new Error("Project not found");
-		if (pageNumber < 1 || pageQuantity < 1) {
-			throw new Error("Invalid pagination parameters");
-		}
-
-		const start = (pageNumber - 1) * pageQuantity;
-		const end = start + pageQuantity;
-		const paginatedFrames = Array.from(project.images.values()).slice(
-			start,
-			end
-		);
-
-		if (paginatedFrames.length === 0) {
-			throw new Error("No frames found for the given pagination");
-		}
 
 		const headers = new Headers({
 			Authorization: `Bearer ${await useAuthStore().access_token}`,
 		});
 
 		let imageResponse: GetImagesResponse | undefined = undefined;
-		console.log(
-			"Fetching images url for frames:",
-			paginatedFrames.map((frame) => frame.id)
-		);
+		let ids = idList.join(",");
+
 		try {
 			//list all ids as a string split by commas
-			let ids = paginatedFrames.map((frame) => frame.id).join(",");
 			const response = await fetch(
 				`https://api.figma.com/v1/images/${project.id}?ids=${ids}&format=png&scale=1`,
 				{
@@ -182,20 +109,16 @@ export const useProjectStore = defineStore("project", () => {
 		} catch (e) {
 			console.error(e);
 			return await useAuthStore().refreshTokenAndRetry(
-				populateImagesFromProjectPaginated,
+				populateImagesFromProject,
 				projectId,
-				pageNumber,
-				pageQuantity
+				idList
 			);
 		}
-		console.log(
-			"Fetched images url for frames:",
-			paginatedFrames.map((frame) => frame.id)
-		);
 
 		if (!imageResponse || !imageResponse.images)
 			throw new Error("No images found");
 
+		// we populate the project image map, unless the image could not be rendered
 		await Promise.all(
 			Object.entries(imageResponse.images).map(async ([key, value]) => {
 				if (value) {
@@ -203,13 +126,36 @@ export const useProjectStore = defineStore("project", () => {
 						id: key,
 						image: await imgUrltoBase64(value),
 					});
+				} else {
+					console.warn("this image could not be rendered");
+					project.images.delete(key);
 				}
 			})
 		);
 
 		updateProject(project);
+	}
 
-		return paginatedFrames;
+	async function populateNextMissingImagesFromProject(
+		projectId: string,
+		quantity: number
+	) {
+		const project = projects.value.get(projectId);
+		if (!project) throw new Error("Project not found");
+
+		const missingFrames = Array.from(project.images.values()).filter(
+			(frame) => !frame.image
+		);
+		const framesToFetch = missingFrames.slice(0, quantity);
+
+		if (framesToFetch.length === 0) {
+			return;
+		}
+
+		await populateImagesFromProject(
+			projectId,
+			framesToFetch.map((frame) => frame.id)
+		);
 	}
 
 	async function clearAllProjects() {
@@ -242,7 +188,7 @@ export const useProjectStore = defineStore("project", () => {
 		addProject,
 		removeProject,
 		updateProject,
-		populateAllImagesFromProject,
+		populateNextMissingImagesFromProject,
 		clearAllProjects,
 	};
 });
@@ -270,6 +216,11 @@ async function fetchProject(id: string): Promise<PurgedProject> {
 		const project: Project = await response.json();
 		project.id = id;
 
+		const storedProject = useProjectStore().projects.get(id);
+		if (storedProject && storedProject.version === project.version) {
+			return storedProject;
+		}
+
 		const purgedProject: PurgedProject = {
 			name: project.name,
 			lastModified: project.lastModified,
@@ -279,12 +230,12 @@ async function fetchProject(id: string): Promise<PurgedProject> {
 			images: new Map<string, TwickedFrameNode>(),
 		};
 		project.document.children.map((child) =>
-			child.children.map((grandchild) =>
+			child.children.map((grandchild) => {
 				purgedProject.images.set(grandchild.id, {
 					id: grandchild.id,
 					image: null,
-				})
-			)
+				});
+			})
 		);
 		return purgedProject;
 	} catch (e) {

@@ -201,7 +201,6 @@ export class XRManager {
 				);
 			anchor.attachedNode = mesh;
 			this.anchorMap.set(mesh.id, anchor);
-			console.log("Child anchored:", mesh.id);
 		} catch (e) {
 			console.warn(e);
 		}

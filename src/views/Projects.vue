@@ -14,15 +14,12 @@ const { projects } = storeToRefs(projectStore);
 const projectUrl = ref("");
 const message = ref("");
 function onAddProject(url: string | number) {
-	console.log(url);
 	if (!url || typeof url !== "string") {
-		console.log("Invalid URL (not string)");
 		message.value = "Please enter a valid Figma URL.";
 		return;
 	}
 	const match = url.match(regex);
 	if (!match) {
-		console.log("Invalid URL (no match)");
 		message.value = "Please enter a valid Figma URL.";
 		return;
 	}
