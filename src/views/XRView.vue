@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 import SceneManager from "../babylon/scenes/scene.ts";
 import { useProjectStore } from '../store/project.store.ts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { storeToRefs } from 'pinia';
+import { useDebounceFn, useElementVisibility, watchDebounced } from '@vueuse/core';
 const props = defineProps<{
 	projectId: string
 }>()
@@ -11,23 +12,19 @@ const props = defineProps<{
 const bjsCanvas = ref<HTMLCanvasElement | null>(null);
 const { projects } = storeToRefs(useProjectStore());
 const project = computed(() => projects.value.get(props.projectId));
-const frames = computed(() => project.value?.images ? Array.from(project.value?.images.values()) : []);
-
+const frames = computed(() => {
+	return project.value?.images ? Array.from(project.value?.images.values()).filter(frame => frame.image) : [];
+});
 const sceneManager = ref<SceneManager | undefined>(undefined);
 
-if ((!frames.value || !frames.value[0] || !frames.value[0].image) && project.value?.id) {
-	console.log("fetching images on first load");
-	useProjectStore().populateAllImagesFromProject(project.value.id);
-}
+const skeletonMarker = useTemplateRef("skeletonMarker");
+const skeletonMarkerIsVisible = useElementVisibility(skeletonMarker)
 
-//if( project changed)
-watch(project, async (value, oldValue) => {
-	console.log("Project changed");
-	if (value?.id && value.id !== oldValue?.id) {
-		console.log("Fetching frames for project:", value.id);
-		await useProjectStore().populateAllImagesFromProject(value.id);
+const debouncedPopulating = useDebounceFn(async (_source, n) => {
+	if (skeletonMarkerIsVisible.value && project.value) {
+		await useProjectStore().populateNextMissingImagesFromProject(props.projectId, n);
 	}
-});
+}, 500)
 
 onMounted(() => {
 	if (bjsCanvas.value) {
@@ -35,6 +32,13 @@ onMounted(() => {
 	}
 });
 
+watch(skeletonMarkerIsVisible, async () => {
+	debouncedPopulating("skeletonvisible", 5);
+});
+
+watch(frames, async () => {
+	debouncedPopulating("frames", 5);
+});
 </script>
 
 <template>
@@ -45,8 +49,10 @@ onMounted(() => {
 				<button v-if="frame.image" class="w-max" @click="() => sceneManager?.Spawn(frame)">
 					<img :src="frame.image || ''">
 				</button>
-				<Skeleton v-else class="h-19 w-19 rounded-full" />
+				<Skeleton v-else class="h-19 w-19 rounded-full" on />
 			</li>
+			<Skeleton ref="skeletonMarker" v-if="frames.length !== project?.images.size" class="h-19 w-19 rounded-full"
+				on />
 		</ul>
 	</section>
 
