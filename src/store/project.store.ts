@@ -4,34 +4,34 @@ import { useAuthStore } from "./auth.store";
 import { GetImagesResponse } from "@figma/rest-api-spec";
 import { ref, watch } from "vue";
 import localforage from "localforage";
-const regex =
-	/https:\/\/[\w\.-]+\.?figma.com\/([\w-]+)\/([0-9a-zA-Z]{22,128})(?:\/.*)?$/;
 
 export const useProjectStore = defineStore("project", () => {
 	const projects = ref(new Map<string, PurgedProject>([]));
 
 	localforage.getItem<string>("projectStore").then((storedData) => {
 		if (storedData) {
-			const newProjectState = {
-				projects: new Map(
-					Object.entries(JSON.parse(storedData).projects)
-				),
-			};
-			useProjectStore().$patch(newProjectState);
+			const newProjectList = new Map<string, PurgedProject>(
+				Object.entries(JSON.parse(storedData).projects)
+			);
+			useProjectStore().projects = newProjectList;
+			refreshOnLoad();
 		}
 	});
 
 	const addProject = async (url: string): Promise<PurgedProject> => {
 		return new Promise<PurgedProject>(async (resolve, reject) => {
-			const match = url.match(regex);
-			if (!match) return reject("Invalid Figma URL");
-			const fileId = url.split("/")[4];
-			const project = await fetchProject(fileId);
-			if (!project) return reject("Failed to fetch project");
+			try {
+				const fileId = url.split("/")[4].split("?")[0];
 
-			project.id = fileId;
-			projects.value.set(project.id, project);
-			resolve(project);
+				const project = await fetchProject(fileId);
+				if (!project) return reject("Failed to fetch project");
+
+				project.id = fileId;
+				projects.value.set(project.id, project);
+				resolve(project);
+			} catch (error) {
+				reject(error);
+			}
 		});
 	};
 
@@ -52,18 +52,26 @@ export const useProjectStore = defineStore("project", () => {
 			});
 		});
 	}
-	async function fetchAllFigmaNodeFromProject(projectId: string) {
-		return new Promise<TwickedFrameNode[]>(async (resolve, reject) => {
-			const project: PurgedProject | undefined =
-				projects.value.get(projectId);
-			if (!project) return reject("Project not found");
+	async function fetchAllFigmaNodeFromProject(
+		projectId: string
+	): Promise<TwickedFrameNode[]> {
+		console.log("init fetchAllFigmaNodeFromProject");
+		const project: PurgedProject | undefined =
+			projects.value.get(projectId);
+		if (!project) throw new Error("Project not found");
 
-			const frames = project.document.children[0].children;
+		const frames = project.document.children[0].children;
 
-			const headers = new Headers({
-				Authorization: `Bearer ${await useAuthStore().access_token}`,
-			});
+		const headers = new Headers({
+			Authorization: `Bearer ${await useAuthStore().access_token}`,
+		});
 
+		let imageResponse: GetImagesResponse;
+		console.log(
+			"Fetching images url for frames:",
+			frames.map((frame) => frame.id)
+		);
+		try {
 			//list all ids as a string split by commas
 			let ids = frames.map((frame) => frame.id).join(",");
 			const response = await fetch(
@@ -73,29 +81,34 @@ export const useProjectStore = defineStore("project", () => {
 					headers,
 				}
 			);
-			const imageResponse: GetImagesResponse = await response.json();
+			imageResponse = await response.json();
 
-			if (imageResponse.err) return reject(imageResponse.err);
+			if (imageResponse.err) throw new Error(imageResponse.err);
+		} catch (e) {
+			console.error(e);
+			return await useAuthStore().refreshTokenAndRetry(
+				fetchAllFigmaNodeFromProject,
+				project.id
+			);
+		}
+		console.log(
+			"Fetched images url for frames:",
+			frames.map((frame) => frame.id)
+		);
 
-			try {
-				await Promise.all(
-					frames.map(async (frame) => {
-						const image = imageResponse.images[frame.id];
-						if (image) {
-							frame.image = await imgUrltoBase64(image);
-						}
-					})
-				);
-			} catch (e) {
-				console.error(e);
-				return reject("Failed to fetch images:" + e);
-			}
+		await Promise.all(
+			frames.map(async (frame) => {
+				const image = imageResponse.images[frame.id];
+				if (image) {
+					frame.image = await imgUrltoBase64(image);
+					console.log("converted image for frame:", frame.id);
+				}
+			})
+		);
+		project.document.children[0].children = frames;
+		updateProject(project);
 
-			project.document.children[0].children = frames;
-			updateProject(project);
-
-			resolve(frames);
-		});
+		return frames;
 	}
 
 	async function clearAllProjects() {
@@ -120,14 +133,13 @@ export const useProjectStore = defineStore("project", () => {
 		addProject,
 		removeProject,
 		updateProject,
-		refreshOnLoad,
 		fetchAllFigmaNodeFromProject,
 		clearAllProjects,
 	};
 });
 
-async function fetchProject(id: string): Promise<PurgedProject | null> {
-	if (id == null) return null;
+async function fetchProject(id: string): Promise<PurgedProject> {
+	if (id == null) return Promise.reject("Invalid ID");
 	try {
 		const headers = new Headers({
 			Authorization: `Bearer ${useAuthStore().access_token || ""}`,
@@ -143,7 +155,7 @@ async function fetchProject(id: string): Promise<PurgedProject | null> {
 
 		if (!response.ok) {
 			console.error("Failed to fetch project:", response.statusText);
-			return null;
+			throw new Error("Failed to fetch project: " + response.statusText);
 		}
 
 		const project: Project = await response.json();
@@ -167,7 +179,7 @@ async function fetchProject(id: string): Promise<PurgedProject | null> {
 		};
 		return purgedProject;
 	} catch (e) {
-		return null;
+		return await useAuthStore().refreshTokenAndRetry(fetchProject, id);
 	}
 }
 

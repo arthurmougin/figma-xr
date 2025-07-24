@@ -1,53 +1,44 @@
 <script lang="ts" setup>
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import SceneManager from "../babylon/scenes/scene.ts";
 import { useProjectStore } from '../store/project.store.ts';
-import { TwickedFrameNode, PurgedProject } from '../definition';
+import { TwickedFrameNode } from '../definition';
 import { Skeleton } from '@/components/ui/skeleton';
+import { storeToRefs } from 'pinia';
 const props = defineProps<{
 	projectId: string
 }>()
 
 const bjsCanvas = ref<HTMLCanvasElement | null>(null);
-const canvasSize = ref({ width: 200, height: 200 })
-const project = ref(undefined as PurgedProject | undefined);
-const frames = ref([] as TwickedFrameNode[]);
-const sceneManager = ref(undefined as SceneManager | undefined);
+const { projects } = storeToRefs(useProjectStore());
+const project = computed(() => projects.value.get(props.projectId));
+const frames = computed(() => project.value?.document.children[0].children as TwickedFrameNode[]);
+const sceneManager = ref<SceneManager | undefined>(undefined);
 
+if ((!frames.value || !frames.value[0].image) && project.value?.id) {
+	console.log("fetching images on first load");
+	useProjectStore().fetchAllFigmaNodeFromProject(project.value.id);
+}
 
-watch(project, async (project: PurgedProject | undefined) => {
-	if (project) {
-		frames.value = await useProjectStore().fetchAllFigmaNodeFromProject(project.id);
-		updateSize
-	}
-})
-
-onMounted(async () => {
-	if (bjsCanvas.value) {
-		sceneManager.value = new SceneManager(bjsCanvas.value);
-		updateSize()
+//if( project changed)
+watch(project, async (value, oldValue) => {
+	console.log("Project changed");
+	if (value?.id && value.id !== oldValue?.id) {
+		console.log("Fetching frames for project:", value.id);
+		await useProjectStore().fetchAllFigmaNodeFromProject(value.id);
 	}
 });
 
-
-async function updateSize() {
-	const parent = bjsCanvas.value?.parentElement
-	if (parent) {
-		canvasSize.value.width = parent.clientWidth
-		canvasSize.value.height = parent.clientHeight - 1
+onMounted(() => {
+	if (bjsCanvas.value) {
+		sceneManager.value = new SceneManager(bjsCanvas.value);
 	}
-	sceneManager.value?.engine?.resize(true)
-}
+});
 
-window.addEventListener('resize', updateSize)
-project.value = useProjectStore().projects.get(props.projectId);
-frames.value = project.value?.document.children[0].children as TwickedFrameNode[];
-console.log(frames.value)
 </script>
 
 <template>
-	<canvas ref="bjsCanvas" class="w-full h-dvh" :width="canvasSize.width * 2" :height="canvasSize.height * 2"
-		touch-action="none" />
+	<canvas ref="bjsCanvas" class="w-full h-dvh" touch-action="none" />
 	<section id="ui-container" class="flex absolute w-full bottom-0 overflow-x-auto overflow-y-hidden">
 		<ul class="frames-parent flex flex-nowrap gap-4 px-4 py-2 items-center justify-center">
 			<li class="frames" v-for="frame in frames" :key="frame.id">
