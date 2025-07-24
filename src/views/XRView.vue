@@ -4,7 +4,7 @@ import SceneManager from "../babylon/scenes/scene.ts";
 import { useProjectStore } from '../store/project.store.ts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { storeToRefs } from 'pinia';
-import { useDebounceFn, useElementVisibility, watchDebounced } from '@vueuse/core';
+import { useDebounceFn, useElementVisibility } from '@vueuse/core';
 const props = defineProps<{
 	projectId: string
 }>()

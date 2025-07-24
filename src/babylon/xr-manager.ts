@@ -1,6 +1,5 @@
 import {
 	Mesh,
-	Nullable,
 	Scene,
 	SixDofDragBehavior,
 	WebXRAnchorSystem,
