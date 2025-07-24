@@ -9,9 +9,7 @@ import {
 	HemisphericLight,
 	Mesh,
 	MeshBuilder,
-	MultiPointerScaleBehavior,
 	Scene,
-	SixDofDragBehavior,
 	StandardMaterial,
 	Texture,
 	Vector3,
@@ -32,7 +30,6 @@ export class SceneManager {
 	constructor(canvas: HTMLCanvasElement) {
 		var engine = new Engine(canvas, true, undefined, true);
 		var scene = new Scene(engine);
-		console.log(engine, scene, canvas);
 
 		this.engine = engine;
 		this.scene = scene;
@@ -90,14 +87,13 @@ export class SceneManager {
 		});
 	}
 	async Spawn(frame: TwickedFrameNode) {
-		console.log("Spawning frame:", frame);
 		const scene = this.scene;
 		const canvas = scene?.getEngine().getRenderingCanvas();
 		if (!scene || !canvas || !frame.image) return;
 
 		//create a plane
 		const plane = MeshBuilder.CreatePlane(
-			"plane",
+			"plane-" + frame.id,
 			{ size: 0.125 },
 			scene
 		) as MeshFrame;
@@ -106,11 +102,9 @@ export class SceneManager {
 		//set plane in front of camera
 		plane.position = new Vector3(0, 0, 0.5);
 		const camera = scene.activeCamera as Camera;
-		console.log(camera);
 		plane.parent = camera;
 		//then live it there as child of scene
 		plane.setParent(null);
-		this.xrManager.anchorChild(plane);
 
 		//set plane material to frame image as png with variable opacity
 		const material = new StandardMaterial("material", scene);
@@ -120,25 +114,13 @@ export class SceneManager {
 		plane.material = material;
 
 		(material.diffuseTexture as Texture).onLoadObservable.add(() => {
-			console.log(material?.diffuseTexture?._texture?.baseHeight);
-			console.log(material?.diffuseTexture?._texture?.baseWidth);
-
 			const aspectRatio =
 				(material?.diffuseTexture?._texture?.baseWidth || 1) /
 				(material?.diffuseTexture?._texture?.baseHeight || 1);
-			console.log("Aspect Ratio:", aspectRatio);
 			plane.scaling = new Vector3(aspectRatio, 1, 1);
 		});
 
-		//make movable
-		plane.isNearGrabbable = true;
-		plane.isNearPickable = true;
-		plane.isPickable = true;
-		const scaleBehavior = new MultiPointerScaleBehavior();
-		plane.addBehavior(scaleBehavior);
-
-		const dragBehavior = new SixDofDragBehavior();
-		plane.addBehavior(dragBehavior);
+		this.xrManager.initChildAnchoring(plane);
 	}
 }
 

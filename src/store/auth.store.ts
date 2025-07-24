@@ -16,6 +16,7 @@ export const useAuthStore = defineStore("auth", {
 		expires_in: null as number | null,
 		refresh_token: null as string | null,
 		figmaState: null as string | null,
+		lastRetry: 0,
 	}),
 	actions: {
 		async login() {
@@ -45,7 +46,7 @@ export const useAuthStore = defineStore("auth", {
 
 			this.router.push({ name: "landingpage" });
 		},
-		async getProfile() {
+		async getProfile(): Promise<void> {
 			const headers = new Headers({
 				Authorization: `Bearer ${this.access_token || ""}`,
 			});
@@ -60,23 +61,18 @@ export const useAuthStore = defineStore("auth", {
 					headers,
 				});
 			} catch (e) {
-				console.warn(e);
-				this.logout();
+				console.error("Failed to fetch user data");
+				return this.refreshTokenAndRetry(this.getProfile);
 			} finally {
-				//how to test if a variable is assigned
-				if (!data) {
-					console.error("Failed to fetch user data");
-					return;
-				}
-				if (!data.ok) {
+				if (!data || !data.ok) {
 					console.error(data);
-					this.logout();
+					return this.refreshTokenAndRetry(this.getProfile);
 				}
 				const meResponse: GetMeResponse = await data.json();
 				this.profile = meResponse;
 			}
 		},
-		async initCallbackRoute(to: RouteLocationNormalized) {
+		async initCallbackRoute(to: RouteLocationNormalized): Promise<void> {
 			try {
 				const state = to.query.state?.toString() || "";
 				if (state !== this.figmaState) {
@@ -120,18 +116,83 @@ export const useAuthStore = defineStore("auth", {
 				this.router.push({ name: "projects" });
 			} catch (e) {
 				this.state = LogStateOptions["error"];
-				console.error(e);
+				return this.refreshTokenAndRetry(this.initCallbackRoute, to);
 			}
 		},
-		async checkLogin() {
+		async checkLogin(): Promise<void> {
 			if (this.state !== LogStateOptions["logged in"]) return;
-			const access_token = this.access_token;
 			const expires_in = this.expires_in;
-			if (
-				access_token === null ||
-				expires_in === null ||
-				Date.now() > expires_in
-			) {
+
+			if (!this.refresh_token) {
+				this.logout();
+				return;
+			}
+
+			if (expires_in === null || Date.now() > expires_in) {
+				await this.refreshTokenAndRetry();
+			}
+
+			try {
+				this.getProfile();
+			} catch (e) {
+				this.logout();
+				throw e;
+			}
+		},
+
+		async refreshTokenAndRetry(
+			functionToRetry?: (parameter?: any) => any,
+			parameter?: any
+		): Promise<any> {
+			if (!this.refresh_token) {
+				this.logout();
+				return;
+			}
+
+			//if this function is used more than once per sessions, it's suspect
+			if (Date.now() - this.lastRetry < 10000) {
+				console.error("Too many retries");
+				this.logout();
+				throw new Error("Too many retries");
+			}
+
+			try {
+				//update access token with refresh token
+				const getRefreshedTokenUrl = new URL(
+					"https://api.figma.com/v1/oauth/token"
+				);
+				getRefreshedTokenUrl.searchParams.set(
+					"refresh_token",
+					this.refresh_token || ""
+				);
+				getRefreshedTokenUrl.searchParams.set(
+					"grant_type",
+					"refresh_token"
+				);
+
+				const credentials = btoa(
+					`${import.meta.env.VITE_ID}:${import.meta.env.VITE_SECRET}`
+				);
+
+				const options = {
+					method: "POST",
+					headers: {
+						authorization: `Basic ${credentials}`,
+						"content-type": "application/x-www-form-urlencoded",
+					},
+				};
+				const data = await fetch(getRefreshedTokenUrl.href, options);
+				const json = await data.json();
+				this.access_token = json.access_token;
+				//expires_in is time expressed in seconds, while date.now() is in milliseconds
+				this.expires_in = parseInt(json.expires_in) * 1000 + Date.now();
+
+				this.lastRetry = Date.now();
+
+				return functionToRetry
+					? await functionToRetry(parameter)
+					: null;
+			} catch (e) {
 				this.logout();
 			}
 		},

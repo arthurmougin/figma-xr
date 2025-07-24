@@ -1,6 +1,8 @@
 import {
 	Mesh,
+	Nullable,
 	Scene,
+	SixDofDragBehavior,
 	WebXRAnchorSystem,
 	WebXRBackgroundRemover,
 	WebXRDefaultExperience,
@@ -8,6 +10,8 @@ import {
 	WebXRDomOverlay,
 	WebXRLightEstimation,
 	WebXRState,
+	MultiPointerScaleBehavior,
+	IWebXRAnchor,
 } from "@babylonjs/core";
 
 const xrPolyfillPromise = new Promise((resolve) => {
@@ -42,6 +46,7 @@ export class XRManager {
 		webXRLightEstimation?: WebXRLightEstimation;
 		webXRDepthSensing?: WebXRDepthSensing;
 	} = {};
+	anchorMap: Map<string, IWebXRAnchor> = new Map();
 	constructor(scene: Scene) {
 		this.scene = scene;
 		this.xrFeatures = {};
@@ -159,8 +164,28 @@ export class XRManager {
 			}
 		);
 	}
+	initChildAnchoring(mesh: Mesh) {
+		//make movable
+		mesh.isNearGrabbable = true;
+		mesh.isNearPickable = true;
+		mesh.isPickable = true;
+		const scaleBehavior = new MultiPointerScaleBehavior();
+		mesh.addBehavior(scaleBehavior);
+
+		const dragBehavior = new SixDofDragBehavior();
+		mesh.addBehavior(dragBehavior);
+		dragBehavior.onDragEndObservable.add(() => {
+			this.anchorChild(mesh);
+		});
+
+		this.anchorChild(mesh);
+	}
 
 	async anchorChild(mesh: Mesh) {
+		const oldAnchor = this.anchorMap.get(mesh.id);
+		if (oldAnchor) {
+			oldAnchor.remove();
+		}
 		const webXRDefaultExperience = this.xrFeatures.webXRDefaultExperience;
 		const webXRAnchorSystem = this.xrFeatures.webXRAnchorSystem;
 
@@ -175,6 +200,8 @@ export class XRManager {
 						: mesh.rotation.toQuaternion()
 				);
 			anchor.attachedNode = mesh;
+			this.anchorMap.set(mesh.id, anchor);
+			console.log("Child anchored:", mesh.id);
 		} catch (e) {
 			console.warn(e);
 		}
