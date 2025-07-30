@@ -1,11 +1,14 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
 import { useRouter } from "vue-router";
-import { useProjectStore } from '../store/project.store.ts';
+import { storeToRefs } from 'pinia';
+
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { storeToRefs } from 'pinia';
+
+import { useProjectStore } from '../store/project.store.ts';
+
 const regex =
 	/https:\/\/[\w\.-]+\.?figma.com\/([\w-]+)\/([0-9a-zA-Z]{22,128})([?:\/.*])?/;
 const router = useRouter();

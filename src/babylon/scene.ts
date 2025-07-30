@@ -1,6 +1,3 @@
-import { AdvancedDynamicTexture } from "@babylonjs/gui/2D";
-import { XRManager } from "../xr-manager";
-import { TwickedFrameNode } from "../../definition";
 import {
 	Camera,
 	Color3,
@@ -14,7 +11,11 @@ import {
 	Texture,
 	Vector3,
 } from "@babylonjs/core";
+import { AdvancedDynamicTexture } from "@babylonjs/gui/2D";
 import { Inspector } from "@babylonjs/inspector";
+
+import { TwickedFrameNode } from "../definition";
+import { InteractionManager } from "./interaction-manager";
 
 // create button type that extends Control and add frame as property
 type MeshFrame = Mesh & {
@@ -26,7 +27,7 @@ export class SceneManager {
 	engine: Engine;
 	scene: Scene;
 
-	xrManager: XRManager;
+	interactionManager: InteractionManager;
 	constructor(canvas: HTMLCanvasElement) {
 		var engine = new Engine(canvas, true, undefined, true);
 		var scene = new Scene(engine);
@@ -70,7 +71,7 @@ export class SceneManager {
 			engine.resize();
 		});
 
-		this.xrManager = new XRManager(this.scene);
+		this.interactionManager = new InteractionManager(this.scene);
 
 		// Debug
 		document.addEventListener("keydown", (event) => {
@@ -94,7 +95,7 @@ export class SceneManager {
 		//create a plane
 		const plane = MeshBuilder.CreatePlane(
 			"plane-" + frame.id,
-			{ size: 0.125 },
+			{ size: 0.125, sideOrientation: Mesh.DOUBLESIDE },
 			scene
 		) as MeshFrame;
 		plane.frame = frame;
@@ -120,7 +121,7 @@ export class SceneManager {
 			plane.scaling = new Vector3(aspectRatio, 1, 1);
 		});
 
-		this.xrManager.initChildAnchoring(plane);
+		this.interactionManager.initChildInteraction(plane);
 	}
 }
 

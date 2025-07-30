@@ -1,7 +1,6 @@
 import {
 	Mesh,
 	Scene,
-	SixDofDragBehavior,
 	WebXRAnchorSystem,
 	WebXRBackgroundRemover,
 	WebXRDefaultExperience,
@@ -9,8 +8,8 @@ import {
 	WebXRDomOverlay,
 	WebXRLightEstimation,
 	WebXRState,
-	MultiPointerScaleBehavior,
 	IWebXRAnchor,
+	WebXRNearInteraction,
 } from "@babylonjs/core";
 
 const xrPolyfillPromise = new Promise((resolve) => {
@@ -44,6 +43,7 @@ export class XRManager {
 		webXRDOMOverlay?: WebXRDomOverlay;
 		webXRLightEstimation?: WebXRLightEstimation;
 		webXRDepthSensing?: WebXRDepthSensing;
+		webXRNearInteraction?: WebXRNearInteraction;
 	} = {};
 	anchorMap: Map<string, IWebXRAnchor> = new Map();
 	constructor(scene: Scene) {
@@ -140,6 +140,8 @@ export class XRManager {
 		);
 		this.xrFeatures.webXRDepthSensing = depthSensing as WebXRDepthSensing;
 
+		console.log(featuresManager.getEnabledFeatures());
+
 		webXRDefaultExperience.baseExperience.onStateChangedObservable.add(
 			(state) => {
 				console.log("XR State Changed:", state);
@@ -163,21 +165,14 @@ export class XRManager {
 			}
 		);
 	}
-	initChildAnchoring(mesh: Mesh) {
-		//make movable
-		mesh.isNearGrabbable = true;
-		mesh.isNearPickable = true;
-		mesh.isPickable = true;
-		const scaleBehavior = new MultiPointerScaleBehavior();
-		mesh.addBehavior(scaleBehavior);
 
-		const dragBehavior = new SixDofDragBehavior();
-		mesh.addBehavior(dragBehavior);
-		dragBehavior.onDragEndObservable.add(() => {
-			this.anchorChild(mesh);
-		});
-
-		this.anchorChild(mesh);
+	async unanchorChild(mesh: Mesh) {
+		const anchor = this.anchorMap.get(mesh.id);
+		if (anchor) {
+			anchor.remove();
+		} else {
+			console.warn("Anchor not found");
+		}
 	}
 
 	async anchorChild(mesh: Mesh) {
@@ -188,7 +183,10 @@ export class XRManager {
 		const webXRDefaultExperience = this.xrFeatures.webXRDefaultExperience;
 		const webXRAnchorSystem = this.xrFeatures.webXRAnchorSystem;
 
-		if (!webXRDefaultExperience || !webXRAnchorSystem) return;
+		if (!webXRDefaultExperience || !webXRAnchorSystem) {
+			console.warn("WebXR experience or anchor system not found");
+			return;
+		}
 
 		try {
 			const anchor =

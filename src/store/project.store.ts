@@ -1,9 +1,10 @@
 import { defineStore } from "pinia";
-import { TwickedFrameNode, Project, PurgedProject } from "../definition.d";
-import { useAuthStore } from "./auth.store";
 import { GetImagesResponse } from "@figma/rest-api-spec";
 import { ref, watch } from "vue";
 import localforage from "localforage";
+
+import { TwickedFrameNode, Project, PurgedProject } from "../definition.d";
+import { useAuthStore } from "./auth.store";
 type StringifyableProject = Omit<PurgedProject, "images"> & {
 	images: { [key: string]: TwickedFrameNode };
 };

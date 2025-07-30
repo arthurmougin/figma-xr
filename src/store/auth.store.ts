@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
-import { LogStateOptions, ProfileType } from "../definition.d";
 import { RouteLocationNormalized } from "vue-router";
 import { GetMeResponse } from "@figma/rest-api-spec";
+
+import { LogStateOptions, ProfileType } from "../definition.d";
 import { useProjectStore } from "./project.store";
 
 const callbackUrl =
