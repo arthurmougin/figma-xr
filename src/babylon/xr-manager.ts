@@ -45,6 +45,8 @@ export class XRManager {
 		webXRDepthSensing?: WebXRDepthSensing;
 		webXRNearInteraction?: WebXRNearInteraction;
 	} = {};
+
+	
 	anchorMap: Map<string, IWebXRAnchor> = new Map();
 	constructor(scene: Scene) {
 		this.scene = scene;
@@ -76,9 +78,6 @@ export class XRManager {
 				},
 			});
 		this.xrFeatures.webXRDefaultExperience = webXRDefaultExperience;
-
-		//set the advanced texture as plane attached to the XR camera when entering XR and set it back when exiting
-		// on enter in xr
 
 		const featuresManager =
 			webXRDefaultExperience.baseExperience.featuresManager;

@@ -58,6 +58,14 @@ export class InteractionManager {
 		mesh.isNearPickable = true;
 		mesh.isPickable = true;
 
+		const child = MeshBuilder.CreateBox(
+			"BoundingBoxFiller",
+			{ size: 0.1 },
+			this.scene
+		);
+		child.isVisible = false;
+		child.parent = mesh;
+
 		mesh.actionManager = new ActionManager(this.scene);
 
 		mesh.actionManager.registerAction(
@@ -88,13 +96,6 @@ export class InteractionManager {
 
 		//if the new one is different from the old one, then we attach it
 		if (oldMesh?.name != mesh.name) {
-			const child = MeshBuilder.CreateBox(
-				"BoundingBoxFiller",
-				{ size: 0.1 },
-				this.scene
-			);
-			child.isVisible = false;
-			child.parent = mesh;
 			this.gizmoManager.attachToMesh(mesh);
 		}
 	}

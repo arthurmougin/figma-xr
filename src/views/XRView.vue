@@ -53,7 +53,7 @@ watch(frames, async () => {
 
 <template>
 	<canvas ref="bjsCanvas" class="w-full h-dvh" touch-action="none" />
-	<section id="ui-container" class="flex items-end">
+	<section id="ui-container" class="flex absolute w-full bottom-0  items-end">
 		<ul
 			class="frames-parent flex flex-nowrap gap-4 px-4 py-2 items-center justify-start overflow-x-auto overflow-y-hidden">
 			<li class="frames" v-for="frame in frames" :key="frame.id">
