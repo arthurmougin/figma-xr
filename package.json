@@ -8,7 +8,7 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "serveo": "ssh -R 80:localhost:5173 serveo.net",
-    "adb_connect": "adb reverse tcp:5173 tcp:5173"
+    "adb_connect": "bash ./scripts/adb-wifi.sh"
   },
   "dependencies": {
     "@babylonjs/core": "^8.17.1",
