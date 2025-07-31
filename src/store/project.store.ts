@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { GetImagesResponse } from "@figma/rest-api-spec";
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import localforage from "localforage";
 
 import { TwickedFrameNode, Project, PurgedProject } from "../definition.d";
@@ -12,6 +12,7 @@ type stringifiedProjectList = { [key: string]: StringifyableProject };
 
 export const useProjectStore = defineStore("project", () => {
 	const projects = ref(new Map<string, PurgedProject>([]));
+	const currentProject = ref<string | null>(null);
 
 	localforage.getItem<string>("projectStore").then((storedData) => {
 		if (storedData) {
@@ -163,6 +164,11 @@ export const useProjectStore = defineStore("project", () => {
 		projects.value.clear();
 	}
 
+	const currentImages = computed(() => {
+		const project = projects.value.get(currentProject.value || "");
+		return project ? Array.from(project.images.values()) : [];
+	});
+
 	watch(
 		projects,
 		() => {
@@ -186,6 +192,8 @@ export const useProjectStore = defineStore("project", () => {
 
 	return {
 		projects,
+		currentProject,
+		currentImages,
 		addProject,
 		removeProject,
 		updateProject,

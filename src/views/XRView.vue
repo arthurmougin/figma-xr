@@ -13,8 +13,9 @@ const props = defineProps<{
 }>();
 
 const bjsCanvas = ref<HTMLCanvasElement | null>(null);
-const { projects } = storeToRefs(useProjectStore());
-const project = computed(() => projects.value.get(props.projectId));
+const { projects, currentProject } = storeToRefs(useProjectStore());
+currentProject.value = props.projectId as string;
+const project = computed(() => projects.value.get(currentProject.value || ""));
 const frames = computed(() => {
 	return project.value?.images
 		? Array.from(project.value?.images.values()).filter(
@@ -28,9 +29,9 @@ const skeletonMarker = useTemplateRef("skeletonMarker");
 const skeletonMarkerIsVisible = useElementVisibility(skeletonMarker);
 
 const debouncedPopulating = useDebounceFn(async (_source, n) => {
-	if (skeletonMarkerIsVisible.value && project.value) {
+	if (skeletonMarkerIsVisible.value && project.value && currentProject.value) {
 		await useProjectStore().populateNextMissingImagesFromProject(
-			props.projectId,
+			currentProject.value,
 			n
 		);
 	}

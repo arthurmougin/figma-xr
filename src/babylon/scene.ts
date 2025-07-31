@@ -111,7 +111,9 @@ export class SceneManager {
 		const material = new StandardMaterial("material", scene);
 		material.diffuseTexture = new Texture(frame.image, scene);
 		material.diffuseTexture.hasAlpha = true;
-		material.alpha = 1;
+		material.useAlphaFromDiffuseTexture = true;
+		material.needDepthPrePass = true;
+		console.log(material);
 		plane.material = material;
 
 		(material.diffuseTexture as Texture).onLoadObservable.add(() => {
