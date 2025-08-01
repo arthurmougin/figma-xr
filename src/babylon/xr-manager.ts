@@ -1,4 +1,3 @@
-import { useProjectStore } from "@/store/project.store";
 import {
 	Mesh,
 	Scene,
@@ -11,13 +10,12 @@ import {
 	WebXRState,
 	IWebXRAnchor,
 	WebXRNearInteraction,
+	WebXRExperienceHelper,
 } from "@babylonjs/core";
-import {
-	GUI3DManager,
-	StackPanel3D,
-	TouchHolographicButton,
-	TouchHolographicMenu,
-} from "@babylonjs/gui";
+import { GUI3DManager, HandMenu, TouchHolographicButton } from "@babylonjs/gui";
+import SceneManager from "./scene";
+import { TwickedFrameNode } from "@/definition";
+import { useProjectStore } from "@/store/project.store";
 
 const xrPolyfillPromise = new Promise((resolve) => {
 	if (navigator.xr) {
@@ -54,8 +52,15 @@ export class XRManager {
 	} = {};
 
 	guiManager: GUI3DManager;
-	ui: TouchHolographicMenu | undefined;
-	buttonList: TouchHolographicButton[] = [];
+	ui:
+		| {
+				menu: HandMenu;
+				buttonList: TouchHolographicButton[];
+				currentTab: number;
+				backButton: TouchHolographicButton;
+				frontButton: TouchHolographicButton;
+		  }
+		| undefined;
 
 	anchorMap: Map<string, IWebXRAnchor> = new Map();
 	constructor(scene: Scene) {
@@ -68,7 +73,7 @@ export class XRManager {
 	async initXR(scene: Scene) {
 		await xrPolyfillPromise;
 
-		//WebXR Features
+		// WebXR Features
 		const webXRDefaultExperience =
 			await scene.createDefaultXRExperienceAsync({
 				uiOptions: {
@@ -93,6 +98,8 @@ export class XRManager {
 
 		const featuresManager =
 			webXRDefaultExperience.baseExperience.featuresManager;
+
+		// WebXRAnchorSystem
 		const webXRAnchorSystem: WebXRAnchorSystem =
 			featuresManager.enableFeature(
 				WebXRAnchorSystem,
@@ -103,6 +110,7 @@ export class XRManager {
 			) as WebXRAnchorSystem;
 		this.xrFeatures.webXRAnchorSystem = webXRAnchorSystem;
 
+		// WebXRBackgroundRemover
 		const xrBackgroundRemover = featuresManager.enableFeature(
 			WebXRBackgroundRemover,
 			"latest",
@@ -116,6 +124,7 @@ export class XRManager {
 		this.xrFeatures.xrBackgroundRemover =
 			xrBackgroundRemover as WebXRBackgroundRemover;
 
+		// WebXRDomOverlay
 		const domOverlay = featuresManager.enableFeature(
 			WebXRDomOverlay,
 			"latest",
@@ -125,6 +134,7 @@ export class XRManager {
 		);
 		this.xrFeatures.webXRDOMOverlay = domOverlay as WebXRDomOverlay;
 
+		// WebXRLightEstimation
 		const lightEstimation = featuresManager.enableFeature(
 			WebXRLightEstimation,
 			"latest",
@@ -138,6 +148,7 @@ export class XRManager {
 		this.xrFeatures.webXRLightEstimation =
 			lightEstimation as WebXRLightEstimation;
 
+		// WebXRDepthSensing
 		const depthSensing = featuresManager.enableFeature(
 			WebXRDepthSensing,
 			"latest",
@@ -176,98 +187,143 @@ export class XRManager {
 			}
 		);
 
-		//XR UI
-		this.ui = new TouchHolographicMenu("menu");
-		//this.guiManager.addControl(this.ui);
-		this.ui.backPlateMargin = 0.5;
-
-		//const panelTop = new StackPanel3D();
-		//const panelBottom = new StackPanel3D();
-
-		this.ui.columns = 3;
-		const previousButton = new TouchHolographicButton("Previous");
-		previousButton.imageUrl = "../assets/icons/Back.png";
-		this.ui.addButton(previousButton);
-		const homeButton = new TouchHolographicButton("Home");
-		this.ui.addButton(homeButton);
-		const nextButton = new TouchHolographicButton("Next");
-		nextButton.imageUrl = "../assets/icons/Front.png";
-		this.ui.addButton(nextButton);
-
-		const button1 = new TouchHolographicButton("Button 1");
-		this.ui.addButton(button1);
-		this.buttonList.push(button1);
-		const button2 = new TouchHolographicButton("Button 2");
-		this.ui.addButton(button2);
-		this.buttonList.push(button2);
-		const button3 = new TouchHolographicButton("Button 3");
-		this.ui.addButton(button3);
-		this.buttonList.push(button3);
-		const button4 = new TouchHolographicButton("Button 4");
-		this.ui.addButton(button4);
-		this.buttonList.push(button4);
-		const button5 = new TouchHolographicButton("Button 5");
-		this.ui.addButton(button5);
-		this.buttonList.push(button5);
-		const button6 = new TouchHolographicButton("Button 6");
-		this.ui.addButton(button6);
-		this.buttonList.push(button6);
-		const button7 = new TouchHolographicButton("Button 7");
-		this.ui.addButton(button7);
-		this.buttonList.push(button7);
-		const button8 = new TouchHolographicButton("Button 8");
-		this.ui.addButton(button8);
-		this.buttonList.push(button8);
-		const button9 = new TouchHolographicButton("Button 9");
-		this.ui.addButton(button9);
-		this.buttonList.push(button9);
+		this.initUI(webXRDefaultExperience.baseExperience);
 	}
 
-	async loadPagination(i = 1): Promise<void> {
-		const QTE_PER_PAGE = 9;
+	initUI(helper: WebXRExperienceHelper) {
+		this.ui = {
+			menu: new HandMenu(helper, "menu"),
+			buttonList: [],
+			currentTab: 1,
+			backButton: new TouchHolographicButton("back"),
+			frontButton: new TouchHolographicButton("next"),
+		};
+
+		this.ui.menu.backPlateMargin = 0.5;
+		this.ui.menu.columns = 3;
+
+		this.ui.backButton.imageUrl = "../assets/icons/Back.png";
+		this.ui.menu.addButton(this.ui.backButton);
+		this.ui.backButton.onPointerClickObservable.add(() => {
+			this.turnPage("prev");
+		});
+
+		const homeButton = new TouchHolographicButton("Home");
+		this.ui.menu.addButton(homeButton);
+		homeButton.isVisible = false;
+
+		this.ui.frontButton.imageUrl = "../assets/icons/Front.png";
+		this.ui.menu.addButton(this.ui.frontButton);
+		this.ui.frontButton.onPointerClickObservable.add(() => {
+			this.turnPage("next");
+		});
+
+		for (let i = 1; i <= 6; i++) {
+			const button = new TouchHolographicButton(`Button ${i}`);
+			button.onPointerClickObservable.add(() =>
+				this.onButtonClick(button)
+			);
+			this.ui.menu.addButton(button);
+			this.ui.buttonList.push(button);
+		}
+
+		this.loadPagination();
+
+		this.guiManager.addControl(this.ui.menu);
+	}
+
+	async turnPage(direction: "next" | "prev"): Promise<void> {
+		if (!this.ui) throw new Error("UI not initialized");
+		if (direction === "next") {
+			this.ui.currentTab = this.ui.currentTab + 1;
+		} else if (direction === "prev" && this.ui.currentTab > 1) {
+			this.ui.currentTab = this.ui.currentTab - 1;
+		}
+
+		this.ui.backButton.isVisible = false;
+		this.ui.frontButton.isVisible = false;
+
+		await this.loadPagination();
+
+		this.ui.backButton.isVisible = true;
+		this.ui.frontButton.isVisible = true;
+	}
+
+	async loadPagination(): Promise<void> {
+		// INPUT CONTROL
+		if (!this.ui) throw new Error("UI not initialized");
+		const QTE_PER_PAGE = this.ui.buttonList.length;
 
 		const projectStore = useProjectStore();
 		const project = projectStore.projects.get(
 			projectStore.currentProject || ""
 		);
+
+		//We cant "watch" the project as a vue component
 		if (!project) {
-			throw new Error("Project not found");
+			setTimeout(() => {
+				this.loadPagination();
+			}, 1000);
+			return;
 		}
+
+		// PAGINATION AND MEDIA LOADING
 		const images = projectStore.currentImages;
 		let loadedImages = images.filter((image) => image.image);
 
 		//if we go back more, then we get back to top
-		if (i < 1) i = Math.ceil(loadedImages.length / QTE_PER_PAGE);
+		if (this.ui.currentTab < 1)
+			this.ui.currentTab = Math.ceil(loadedImages.length / QTE_PER_PAGE);
 
 		// Load the specified page of buttons
-		const startIndex = (i - 1) * QTE_PER_PAGE;
+		const startIndex = (this.ui.currentTab - 1) * QTE_PER_PAGE;
 		const endIndex = startIndex + QTE_PER_PAGE;
 
 		//If we lack images to draw
 		if (endIndex > loadedImages.length) {
 			//but we can't load more images
 			if (loadedImages.length == images.length) {
-				return this.loadPagination(1);
+				this.ui.currentTab = 1;
+				return this.loadPagination();
 			}
 
 			// Load more images
 			await projectStore.populateNextMissingImagesFromProject(
 				projectStore.currentProject || "",
-				loadedImages.length - endIndex
+				QTE_PER_PAGE
 			);
 			loadedImages = useProjectStore().currentImages;
 		}
 
+		// RENDERING
 		const imagesToLoad = loadedImages.slice(startIndex, endIndex);
-		for (let i = 0; i < this.buttonList.length; i++) {
+		// for each button
+		for (let i = 0; i < this.ui.buttonList.length; i++) {
 			const imageFrame = imagesToLoad[i];
-			const button = this.buttonList[i];
+			const button = this.ui.buttonList[i];
+
 			if (imageFrame.image) {
 				button.imageUrl = imageFrame.image;
+				if (!button.node) throw new Error("Missing node on button");
+				if (!button.node.metadata) button.node.metadata = {};
+				button.node.metadata.frame = imageFrame;
+				button.isVisible = true;
 			} else {
+				// If we are at the last page and it's not full, we hide the empty buttons
 				button.imageUrl = "";
+				button.isVisible = false;
 			}
 		}
+	}
+
+	async onButtonClick(button: TouchHolographicButton) {
+		if (!button.isVisible || !button.node) return;
+
+		const frame: TwickedFrameNode | undefined = button.node.metadata?.frame;
+		if (!frame)
+			throw new Error("something went wrong when adding the button");
+
+		SceneManager.getInstance().Spawn(frame);
 	}
 
 	async unanchorChild(mesh: Mesh) {

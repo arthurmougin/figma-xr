@@ -24,12 +24,27 @@ type MeshFrame = Mesh & {
 };
 
 export class SceneManager {
+	//singleton pattern
+	private static _instance: SceneManager;
+	private static _canvas: HTMLCanvasElement;
+
+	static getInstance(
+		canvas: HTMLCanvasElement = SceneManager._canvas
+	): SceneManager {
+		if (!SceneManager._instance) {
+			SceneManager._instance = new SceneManager(canvas);
+		}
+		return SceneManager._instance;
+	}
+
 	UI?: AdvancedDynamicTexture;
 	engine: Engine;
 	scene: Scene;
 	materials: StandardMaterial[] = [];
 	interactionManager: InteractionManager;
 	constructor(canvas: HTMLCanvasElement) {
+		SceneManager._canvas = canvas;
+		SceneManager._instance = this;
 		var engine = new Engine(canvas, true, undefined, true);
 		var scene = new Scene(engine);
 
@@ -128,7 +143,6 @@ export class SceneManager {
 		}
 		material.diffuseTexture = new Texture(frame.image, scene);
 		material.diffuseTexture.hasAlpha = true;
-		console.log(material);
 		plane.material = material;
 
 		(material.diffuseTexture as Texture).onLoadObservable.add(() => {
