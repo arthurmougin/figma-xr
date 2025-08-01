@@ -16,6 +16,7 @@ import { Inspector } from "@babylonjs/inspector";
 
 import { TwickedFrameNode } from "../definition";
 import { InteractionManager } from "./interaction-manager";
+import { useProjectStore } from "@/store/project.store";
 
 // create button type that extends Control and add frame as property
 type MeshFrame = Mesh & {
@@ -26,7 +27,7 @@ export class SceneManager {
 	UI?: AdvancedDynamicTexture;
 	engine: Engine;
 	scene: Scene;
-
+	materials: StandardMaterial[] = [];
 	interactionManager: InteractionManager;
 	constructor(canvas: HTMLCanvasElement) {
 		var engine = new Engine(canvas, true, undefined, true);
@@ -62,6 +63,16 @@ export class SceneManager {
 		if (environment) {
 			environment.setMainColor(Color3.FromHexString("#79ecec"));
 		}
+
+		//We create in advance a material for each images in the project, even if they are not loaded yet
+		const images = useProjectStore().currentImages;
+		images.forEach((image) => {
+			const material = new StandardMaterial(
+				"material-" + image.id,
+				scene
+			);
+			this.materials.push(material);
+		});
 
 		engine.runRenderLoop(() => {
 			scene.render();
@@ -108,11 +119,15 @@ export class SceneManager {
 		plane.setParent(null);
 
 		//set plane material to frame image as png with variable opacity
-		const material = new StandardMaterial("material", scene);
+		let material = this.materials.find(
+			(m) => m.name === "material-" + frame.id
+		);
+		if (!material) {
+			material = new StandardMaterial("material-" + frame.id, scene);
+			this.materials.push(material);
+		}
 		material.diffuseTexture = new Texture(frame.image, scene);
 		material.diffuseTexture.hasAlpha = true;
-		material.useAlphaFromDiffuseTexture = true;
-		material.needDepthPrePass = true;
 		console.log(material);
 		plane.material = material;
 

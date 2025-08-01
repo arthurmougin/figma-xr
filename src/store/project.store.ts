@@ -164,7 +164,7 @@ export const useProjectStore = defineStore("project", () => {
 		projects.value.clear();
 	}
 
-	const currentImages = computed(() => {
+	const currentImages = computed((): TwickedFrameNode[] => {
 		const project = projects.value.get(currentProject.value || "");
 		return project ? Array.from(project.images.values()) : [];
 	});
