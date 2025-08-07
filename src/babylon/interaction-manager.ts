@@ -93,7 +93,7 @@ export class InteractionManager {
 				{ size: 0.1 },
 				this.scene
 			);
-			//child.isVisible = false;
+			child.isVisible = false;
 			child.parent = mesh;
 			this.gizmoManager.attachToMesh(mesh);
 		}
