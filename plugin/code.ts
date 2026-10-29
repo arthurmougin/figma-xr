@@ -23,7 +23,10 @@ let serial = 0,
 let lastViewport = "",
   lastChange = Date.now(),
   contentEpoch = 0;
-const notify = (message: unknown) => figma.ui.postMessage(message);
+let uiNonce = "",
+  controllerError: string | null = null;
+const notify = (message: Record<string, unknown>) =>
+  figma.ui.postMessage({ ...message, nonce: uiNonce });
 const bounds = () => ({ ...figma.viewport.bounds });
 function visible(node: SceneNode): boolean {
   let n: BaseNode | null = node;
@@ -98,23 +101,98 @@ function markChanged(event: NodeChangeEvent) {
     if (connected) notify({ type: "invalidate", revision: ++revision });
   }
 }
+let subscribedPage: PageNode | null = null;
 function attachPage() {
-  page.off("nodechange", markChanged);
+  if (subscribedPage) {
+    try {
+      subscribedPage.off("nodechange", markChanged);
+    } catch {}
+    subscribedPage = null;
+  }
   page = figma.currentPage;
   const loading = page;
-  loading.loadAsync().then(() => {
-    if (page !== loading) return;
-    page.on("nodechange", markChanged);
-    lastViewport = "";
-    queued = true;
-  });
+  void loading
+    .loadAsync()
+    .then(() => {
+      if (page !== loading) return;
+      page.on("nodechange", markChanged);
+      subscribedPage = page;
+      controllerError = null;
+      lastViewport = "";
+      queued = true;
+    })
+    .catch((error) => {
+      console.error("Figma XR page watcher:", error);
+      controllerError =
+        "The current page could not be prepared. Reopen the plugin in an editable design page.";
+      notify({ type: "controller-error", message: controllerError });
+    });
 }
-figma.on("currentpagechange", attachPage);
-figma.on("selectionchange", () => {
-  queued = true;
-  lastChange = Date.now();
-});
-attachPage();
+figma.ui.onmessage = async (message) => {
+  if (message?.type === "load-settings") {
+    if (
+      typeof message.nonce !== "string" ||
+      !/^[a-f0-9]{32}$/.test(message.nonce)
+    )
+      return;
+    uiNonce = message.nonce;
+    notify({ type: "controller-ready" });
+    let settings;
+    try {
+      settings = await figma.clientStorage.getAsync(
+        "figma-xr-companion-settings",
+      );
+    } catch {}
+    notify({ type: "settings", settings });
+    if (controllerError)
+      notify({ type: "controller-error", message: controllerError });
+  }
+  if (message?.type !== "load-settings" && message?.nonce !== uiNonce) return;
+  if (message?.type === "disconnected") connected = false;
+  if (message?.type === "connected") {
+    connected = true;
+    notify({
+      type: "catalog-bytes",
+      items: [...assets].map(([id, asset]) => ({ id, ...asset })),
+    });
+    queued = true;
+    await publish();
+  }
+  if (message?.type === "poll" && connected) {
+    const key = JSON.stringify({ view: bounds(), zoom: figma.viewport.zoom });
+    if (key !== lastViewport) {
+      lastViewport = key;
+      queued = true;
+      lastChange = Date.now();
+      notify({ type: "invalidate", revision: ++revision });
+    }
+    if (queued && Date.now() - lastChange >= 350) await publish();
+  }
+  if (message?.type === "sync" && connected) {
+    for (const id of assets.keys()) dirty.add(id);
+    await publish();
+  }
+  if (message?.type === "selection" && connected) await publish(true);
+  if (message?.type === "settings")
+    await figma.clientStorage.setAsync(
+      "figma-xr-companion-settings",
+      message.settings,
+    );
+};
+
+try {
+  figma.on("currentpagechange", attachPage);
+  figma.on("selectionchange", () => {
+    queued = true;
+    lastChange = Date.now();
+  });
+  attachPage();
+} catch (error) {
+  console.error("Figma XR controller:", error);
+  controllerError =
+    "The plugin controller could not watch this page. Reopen it in an editable design page.";
+  notify({ type: "controller-error", message: controllerError });
+}
 async function publish(selectionOnly = false) {
   if (busy) {
     queued = true;
@@ -280,44 +358,3 @@ async function publish(selectionOnly = false) {
     busy = false;
   }
 }
-figma.ui.onmessage = async (message) => {
-  if (message?.type === "load-settings") {
-    let settings;
-    try {
-      settings = await figma.clientStorage.getAsync(
-        "figma-xr-companion-settings",
-      );
-    } catch {}
-    notify({ type: "settings", settings });
-  }
-  if (message?.type === "disconnected") connected = false;
-  if (message?.type === "connected") {
-    connected = true;
-    notify({
-      type: "catalog-bytes",
-      items: [...assets].map(([id, asset]) => ({ id, ...asset })),
-    });
-    queued = true;
-    await publish();
-  }
-  if (message?.type === "poll" && connected) {
-    const key = JSON.stringify({ view: bounds(), zoom: figma.viewport.zoom });
-    if (key !== lastViewport) {
-      lastViewport = key;
-      queued = true;
-      lastChange = Date.now();
-      notify({ type: "invalidate", revision: ++revision });
-    }
-    if (queued && Date.now() - lastChange >= 350) await publish();
-  }
-  if (message?.type === "sync" && connected) {
-    for (const id of assets.keys()) dirty.add(id);
-    await publish();
-  }
-  if (message?.type === "selection" && connected) await publish(true);
-  if (message?.type === "settings")
-    await figma.clientStorage.setAsync(
-      "figma-xr-companion-settings",
-      message.settings,
-    );
-};

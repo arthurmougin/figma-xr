@@ -23,7 +23,9 @@ test("plugin publishes edits and geometry coherently, refreshes offscreen assets
     parent: { type: "DOCUMENT" },
     loadAsync: async () => {},
     on: (event, fn) => events.set(event, fn),
-    off: () => {},
+    off: () => {
+      throw new Error("No listener registered yet");
+    },
   };
   const make = (id, x) => ({
     id,
@@ -86,22 +88,26 @@ test("plugin publishes edits and geometry coherently, refreshes offscreen assets
   });
   await Promise.resolve();
   await Promise.resolve();
-  await figma.ui.onmessage({ type: "load-settings" });
+  const nonce = "0123456789abcdef0123456789abcdef";
+  const send = (message) => figma.ui.onmessage({ ...message, nonce });
+  await send({ type: "load-settings" });
   assert.equal(messages.at(-1).type, "settings");
+  assert.equal(messages.at(-1).nonce, nonce);
+  assert.ok(messages.some((message) => message.type === "controller-ready"));
   assert.equal(first.exports, 0);
-  await figma.ui.onmessage({ type: "connected" });
+  await send({ type: "connected" });
   assert.equal(first.exports, 1);
   assert.equal(second.exports, 1);
   assert.equal(slices, removed);
   assert.ok(messages.some((m) => m.type === "viewport-bytes"));
   // Establish the viewport polling key before a content change.
-  await figma.ui.onmessage({ type: "poll" });
+  await send({ type: "poll" });
   now += 500;
-  await figma.ui.onmessage({ type: "poll" });
+  await send({ type: "poll" });
   figma.viewport.bounds = { x: 0, y: 0, width: 200, height: 150 };
-  await figma.ui.onmessage({ type: "poll" });
+  await send({ type: "poll" });
   now += 500;
-  await figma.ui.onmessage({ type: "poll" });
+  await send({ type: "poll" });
   const child = { id: "child", type: "RECTANGLE", parent: second };
   events.get("nodechange")({
     nodeChanges: [
@@ -115,7 +121,7 @@ test("plugin publishes edits and geometry coherently, refreshes offscreen assets
   });
   assert.equal(messages.at(-1).type, "invalidate");
   now += 500;
-  await figma.ui.onmessage({ type: "poll" });
+  await send({ type: "poll" });
   assert.equal(second.exports, 2);
   assert.equal(first.exports, 1);
   events.get("nodechange")({
@@ -129,14 +135,14 @@ test("plugin publishes edits and geometry coherently, refreshes offscreen assets
     ],
   });
   now += 500;
-  await figma.ui.onmessage({ type: "poll" });
+  await send({ type: "poll" });
   assert.equal(first.exports, 1);
   page.children = [first];
   events.get("nodechange")({
     nodeChanges: [{ id: second.id, type: "DELETE" }],
   });
   now += 500;
-  await figma.ui.onmessage({ type: "poll" });
+  await send({ type: "poll" });
   assert.ok(
     messages.some((m) => m.type === "catalog-remove" && m.ids.includes("two")),
   );

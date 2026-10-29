@@ -209,10 +209,13 @@ test("plugin auto-prepares a QR without URL entry and waits for a phone before e
       if (!message) return;
       (window as any).pluginMessages.push(message.type);
       if (message.type === "load-settings")
+        (window as any).pluginNonce = message.nonce;
+      if (message.type === "load-settings")
         (event.source as Window).postMessage(
           {
             pluginMessage: {
               type: "settings",
+              nonce: message.nonce,
               settings: {
                 website: "https://localhost:5173/figma-xr/",
                 relay: "https://localhost:5173",
@@ -269,6 +272,7 @@ test("plugin auto-prepares a QR without URL entry and waits for a phone before e
       {
         pluginMessage: {
           type: "catalog-bytes",
+          nonce: (window as any).pluginNonce,
           items: [
             {
               id: "from-plugin",
@@ -294,4 +298,95 @@ test("plugin auto-prepares a QR without URL entry and waits for a phone before e
     phone.getByText("Plugin offline · saved catalog ready"),
   ).toBeVisible();
   await phone.close();
+});
+
+test("plugin accepts SDK-dispatched replies with no parent source and ignores other launch tokens", async ({
+  page,
+}) => {
+  const html = readFileSync("plugin/dist/ui.html", "utf8");
+  await page.goto("companion");
+  await page.evaluate((html) => {
+    window.addEventListener("message", (event) => {
+      if (event.data?.pluginMessage?.type === "load-settings")
+        (window as any).pluginNonce = event.data.pluginMessage.nonce;
+    });
+    const iframe = document.createElement("iframe");
+    iframe.id = "plugin";
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.srcdoc = html;
+    document.body.replaceChildren(iframe);
+  }, html);
+  await expect
+    .poll(() => page.evaluate(() => (window as any).pluginNonce || ""))
+    .toMatch(/^[a-f0-9]{32}$/);
+  const nonce = await page.evaluate(() => (window as any).pluginNonce),
+    frame = page.frameLocator("#plugin");
+  await frame
+    .locator("body")
+    .evaluate(() =>
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          source: null,
+          data: {
+            pluginMessage: {
+              type: "settings",
+              nonce: "wrong-token",
+              settings: null,
+            },
+          },
+        }),
+      ),
+    );
+  await expect(
+    frame.getByRole("link", { name: "Open companion", exact: true }),
+  ).not.toBeVisible();
+  await frame
+    .locator("body")
+    .evaluate(
+      (_, nonce) =>
+        window.dispatchEvent(
+          new MessageEvent("message", {
+            source: null,
+            data: {
+              pluginMessage: {
+                type: "settings",
+                nonce,
+                settings: {
+                  website: "https://localhost:5173/figma-xr/",
+                  relay: "https://localhost:5173",
+                },
+              },
+            },
+          }),
+        ),
+      nonce,
+    );
+  await expect(
+    frame.getByRole("link", { name: "Open companion", exact: true }),
+  ).toBeVisible();
+});
+
+test("plugin shows a recoverable controller timeout instead of preparing indefinitely", async ({
+  page,
+}) => {
+  const html = readFileSync("plugin/dist/ui.html", "utf8");
+  await page.goto("companion");
+  await page.evaluate((html) => {
+    const iframe = document.createElement("iframe");
+    iframe.id = "plugin";
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.srcdoc = html;
+    document.body.replaceChildren(iframe);
+  }, html);
+  const frame = page.frameLocator("#plugin");
+  await expect(frame.getByRole("status")).toContainText(
+    "controller did not respond",
+    { timeout: 7000 },
+  );
+  await frame
+    .getByRole("button", { name: "Retry connection", exact: true })
+    .click();
+  await expect(frame.getByRole("status")).toContainText(
+    "Loading your connection",
+  );
 });

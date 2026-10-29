@@ -48,6 +48,12 @@ For a published plugin, set `FIGMA_XR_COMPANION_URL` and `FIGMA_XR_RELAY_URL` in
 
 The development manifest permits configurable network destinations. Before a Community release, restrict `networkAccess.allowedDomains` to the production relay and move localhost destinations to `devAllowedDomains`.
 
+## Plugin startup troubleshooting
+
+Connection fields should already be filled by the build. If the panel remains at startup, close it and rerun **Plugins → Development → Figma XR Companion** to load both the rebuilt controller and UI. The panel now retries the settings handshake and reports a controller timeout after five seconds instead of waiting indefinitely. SDK replies are correlated with a per-launch token, without assuming a particular browser `MessageEvent.source` value. Errors in optional page-watching setup no longer prevent the connection handler from starting.
+
+If it reports that the pairing service is unreachable, keep `npm run dev:relay` and `npm run dev` running. The local desktop endpoint is `http://127.0.0.1:8787`; the phone endpoint uses the computer's HTTPS LAN address through Vite. These are intentionally different routes to the same relay. A loaded QR followed by a phone timeout is a network/firewall or phone HTTPS issue, separate from the controller startup.
+
 ## Experience
 
 Visible top-level frames, components, instances and groups become catalog entries. **Add selected items** adds nested elements, including offscreen selections. The catalog accumulates as you pan and is bounded to 256 items per pairing session. Search it on the phone and place any item repeatedly without returning to the desktop. The library works without a current screen match or a connected plugin.

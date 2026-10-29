@@ -7,6 +7,9 @@ import {
 } from "./connection.mjs";
 declare const __COMPANION_CONNECTION__: Connection;
 const built = __COMPANION_CONNECTION__;
+const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+  byte.toString(16).padStart(2, "0"),
+).join("");
 const $ = (id: string) => document.getElementById(id)!;
 const website = $("website") as HTMLInputElement,
   relay = $("relay") as HTMLInputElement,
@@ -22,8 +25,11 @@ let connection: Connection | null = null,
   generation = 0;
 let retry: ReturnType<typeof setTimeout> | null = null,
   request: AbortController | null = null;
+let startupTimeout: ReturnType<typeof setTimeout> | null = null,
+  startupRetry: ReturnType<typeof setInterval> | null = null,
+  controllerReady = false;
 const tell = (message: unknown) =>
-  parent.postMessage({ pluginMessage: message }, "*");
+  parent.postMessage({ pluginMessage: { ...(message as object), nonce } }, "*");
 const status = (text: string) => {
   $("status").textContent = text;
 };
@@ -65,6 +71,14 @@ function connect() {
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   const active = new WebSocket(url);
   socket = active;
+  const connectTimeout = setTimeout(() => {
+    if (active === socket) {
+      active.close();
+      status(
+        "The pairing server did not finish connecting. Use Retry connection.",
+      );
+    }
+  }, 8000);
   active.onopen = () => {
     if (active === socket)
       active.send(
@@ -85,6 +99,7 @@ function connect() {
       return;
     }
     if (packet.type === "joined") {
+      clearTimeout(connectTimeout);
       showQR(true);
       $("pair").textContent = "New QR";
       status(
@@ -107,6 +122,7 @@ function connect() {
     if (packet.type === "error") status(packet.message);
   };
   active.onclose = (event) => {
+    clearTimeout(connectTimeout);
     if (active !== socket) return;
     socket = null;
     showQR(false);
@@ -187,7 +203,10 @@ async function pair(attempt = 0) {
     clearTimeout(timeout);
   }
 }
-$("pair").onclick = () => void pair();
+$("pair").onclick = () => {
+  if (initialized) void pair();
+  else requestSettings();
+};
 $("apply").onclick = () => {
   try {
     connection = normalizeConnection({
@@ -216,11 +235,25 @@ $("selection").onclick = () => {
 setInterval(() => tell({ type: "poll" }), 400);
 setInterval(() => send({ type: "ping" }), 20_000);
 window.onmessage = (event) => {
-  if (event.source !== parent) return;
+  // Figma's native bridge does not guarantee a parent WindowProxy as source.
+  // Correlate replies to this launch instead of rejecting valid SDK messages.
   const message = event.data?.pluginMessage;
-  if (!message) return;
+  if (!message || message.nonce !== nonce) return;
+  if (message.type === "controller-ready") {
+    controllerReady = true;
+    if (!initialized) {
+      $("connection").textContent = "Figma connected";
+      status("Loading connection preferences…");
+    }
+  }
+  if (message.type === "controller-error") {
+    status(message.message);
+    return;
+  }
   if (message.type === "settings" && !initialized) {
     initialized = true;
+    if (startupTimeout) clearTimeout(startupTimeout);
+    if (startupRetry) clearInterval(startupRetry);
     const selected = chooseConnection(built, message.settings);
     connection = selected.connection;
     manual = selected.manual;
@@ -248,7 +281,38 @@ window.onmessage = (event) => {
     linked &&
     (message.type === "invalidate" || message.type === "catalog-remove")
   )
-    send(message);
+    send(
+      message.type === "invalidate"
+        ? { type: "invalidate", revision: message.revision }
+        : { type: "catalog-remove", ids: message.ids },
+    );
   if (linked && message.type === "status") status(message.message);
 };
-tell({ type: "load-settings" });
+function requestSettings() {
+  if (startupTimeout) clearTimeout(startupTimeout);
+  if (startupRetry) clearInterval(startupRetry);
+  controllerReady = false;
+  $("connection").textContent = "Connecting to Figma";
+  status("Loading your connection configuration…");
+  let attempts = 0;
+  startupTimeout = setTimeout(() => {
+    if (!initialized)
+      status(
+        controllerReady
+          ? "Figma did not finish loading the connection settings. Use Retry connection or reopen the plugin."
+          : "The Figma plugin controller did not respond. Close and reopen the plugin, then use Retry connection if needed.",
+      );
+  }, 5000);
+  startupRetry = setInterval(() => {
+    if (initialized || ++attempts > 3) {
+      if (startupRetry) clearInterval(startupRetry);
+      return;
+    }
+    tell({ type: "load-settings" });
+  }, 750);
+  tell({ type: "load-settings" });
+}
+try {
+  setInputs(normalizeConnection(built));
+} catch {}
+requestSettings();

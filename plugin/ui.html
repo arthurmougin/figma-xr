@@ -98,7 +98,7 @@
   <body>
     <h1>Figma XR</h1>
     <p>Scan to bring your designs into AR.</p>
-    <div id="connection">Preparing connection</div>
+    <div id="connection">Connecting to Figma</div>
     <canvas
       id="qr"
       width="240"
@@ -109,7 +109,7 @@
     ></canvas
     ><a id="link" target="_blank" rel="noreferrer" hidden>Open companion</a>
     <p id="status" role="status" aria-live="polite">
-      Preparing your phone connection…
+      Starting the plugin…
     </p>
     <button id="pair" class="secondary">Retry connection</button>
     <div>
@@ -142,6 +142,16 @@
       >
       <button id="apply">Apply and reconnect</button>
     </details>
+    <script>
+      const showStartupError = () => {
+        document.getElementById("connection").textContent =
+          "Plugin startup error";
+        document.getElementById("status").textContent =
+          "The plugin UI could not start. Close and reopen it; the Figma developer console has the error details.";
+      };
+      window.addEventListener("error", showStartupError);
+      window.addEventListener("unhandledrejection", showStartupError);
+    </script>
     <script>
       /* BUNDLE */
     </script>
