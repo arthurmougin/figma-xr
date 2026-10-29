@@ -427,7 +427,7 @@ export class CompanionScene {
     mesh.addBehavior(drag);
     mesh.addBehavior(new MultiPointerScaleBehavior());
     drag.onDragStartObservable.add(() => {
-      this.anchorEpoch.set(mesh,(this.anchorEpoch.get(mesh)||0)+1);
+      this.anchorEpoch.set(mesh, (this.anchorEpoch.get(mesh) || 0) + 1);
       this.objectAnchors.get(mesh)?.remove();
       this.objectAnchors.delete(mesh);
     });
@@ -441,13 +441,14 @@ export class CompanionScene {
   }
   private async anchor(mesh: Mesh) {
     if (!this.inXR || !this.anchors?.attached) return;
-    const epoch=(this.anchorEpoch.get(mesh)||0)+1;this.anchorEpoch.set(mesh,epoch);
+    const epoch = (this.anchorEpoch.get(mesh) || 0) + 1;
+    this.anchorEpoch.set(mesh, epoch);
     try {
       const anchor = await this.anchors.addAnchorAtPositionAndRotationAsync(
         mesh.position.clone(),
         mesh.rotationQuaternion?.clone(),
       );
-      if (mesh.isDisposed() || this.anchorEpoch.get(mesh)!==epoch) {
+      if (mesh.isDisposed() || this.anchorEpoch.get(mesh) !== epoch) {
         anchor.remove();
         return;
       }

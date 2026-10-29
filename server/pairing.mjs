@@ -20,6 +20,7 @@ export function validatePublish(packet) {
       packet.items.length <= 64 &&
       packet.items.every(
         (i) =>
+          i &&
           typeof i.id === "string" &&
           i.id.length < 200 &&
           typeof i.name === "string" &&
@@ -61,6 +62,7 @@ export function validatePublish(packet) {
       s.items.length <= 256 &&
       s.items.every(
         (i) =>
+          i &&
           typeof i.id === "string" &&
           rect(i.bounds) &&
           finite(i.z) &&
@@ -74,10 +76,11 @@ export function validatePublish(packet) {
 }
 const secret = () => randomBytes(24).toString("base64url");
 function same(a, b) {
+  if (typeof a !== "string") return false;
+  const provided = Buffer.from(a),
+    expected = Buffer.from(b);
   return (
-    typeof a === "string" &&
-    a.length === b.length &&
-    timingSafeEqual(Buffer.from(a), Buffer.from(b))
+    provided.length === expected.length && timingSafeEqual(provided, expected)
   );
 }
 export function attachPairing(
@@ -182,6 +185,10 @@ export function attachPairing(
         try {
           data = JSON.parse(raw.toString());
         } catch {
+          ws.close(1008, "Invalid message");
+          return;
+        }
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
           ws.close(1008, "Invalid message");
           return;
         }

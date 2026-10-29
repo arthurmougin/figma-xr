@@ -15,6 +15,18 @@ It works on laptop, smartphone, and even in AR with such smartphone.
 - [Vite](https://vitejs.dev/)
 - [Github pages](https://pages.github.com/)
 
+## Plugin companion (no OAuth)
+
+The experimental [plugin companion](docs/plugin-companion.md) pairs an open Figma
+file with the phone by QR. It keeps an offline catalog for repeated AR placement
+and adds natural-feature screen picking with confidence gating.
+
+Run `npm ci`, `npm run build:plugin`, then `npm run dev:relay` and `npm run dev`
+in separate terminals. Import `plugin/manifest.json` into Figma desktop and open
+`/figma-xr/companion` on the phone through a reachable, trusted HTTPS address.
+This route needs no Figma API credentials. Physical screen tracking still needs
+device validation; catalog placement works independently of tracking.
+
 ## Installation and OAuth configuration
 
 Use Node.js 22.18+ or Node.js 24 LTS, then run `npm ci`.

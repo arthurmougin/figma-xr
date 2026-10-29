@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import WebSocket from "ws";
 import { once } from "node:events";
+import { readdirSync } from "node:fs";
 test("plugin pairing skips OAuth, applies edits and retains the catalog offline after reload", async ({
   page,
   request,
@@ -125,12 +126,17 @@ test("OpenCV worker initializes and extracts natural features in the browser", a
   page,
 }) => {
   await page.goto("companion");
-  const count = await page.evaluate(async () => {
+  const workerUrl = process.env.TEST_PRODUCTION
+    ? "/figma-xr/assets/" +
+      readdirSync("dist/assets").find(
+        (name) => name.startsWith("tracker.worker-") && name.endsWith(".js"),
+      )
+    : "/figma-xr/src/companion/tracker.worker.ts?worker_file&type=module";
+  const count = await page.evaluate(async (workerUrl) => {
     const WorkerClass = Worker;
-    const worker = new WorkerClass(
-      new URL("/src/companion/tracker.worker.ts", location.origin),
-      { type: "module" },
-    );
+    const worker = new WorkerClass(new URL(workerUrl, location.origin), {
+      type: "module",
+    });
     try {
       return await new Promise<number>((resolve, reject) => {
         const timer = setTimeout(
@@ -186,6 +192,6 @@ test("OpenCV worker initializes and extracts natural features in the browser", a
     } finally {
       worker.terminate();
     }
-  });
+  }, workerUrl);
   expect(count).toBeGreaterThan(100);
 });

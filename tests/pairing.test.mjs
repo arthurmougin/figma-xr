@@ -101,6 +101,12 @@ test("pairing checks origins and capability tokens; phone cannot publish documen
   assert.equal((await f.create("null")).status, 201);
   const pair = await (await f.create()).json();
   assert.notEqual(pair.desktopToken, pair.phoneToken);
+  const unicode = await f.join(
+    pair.room,
+    "desktop",
+    "é".repeat(pair.desktopToken.length),
+  );
+  assert.equal((await once(unicode.socket, "close"))[0], 1008);
   const wrong = await f.join(pair.room, "desktop", pair.phoneToken);
   assert.equal((await once(wrong.socket, "close"))[0], 1008);
   const desktop = await f.join(pair.room, "desktop", pair.desktopToken);
