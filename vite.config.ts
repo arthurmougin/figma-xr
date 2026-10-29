@@ -20,13 +20,15 @@ export default defineConfig({
 			cert: fileURLToPath(new URL("./certs/server.crt", import.meta.url)),
 		},
 		port: 5173,
+		strictPort: true,
+		proxy: { "/api/figma": "http://127.0.0.1:8787" },
 	},
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 		},
 	},
-	base: "/figma-xr",
+	base: "/figma-xr/",
 	assetsInclude: ["**/**.gltf", "**/**.glb", "**/**.hdri", "**/**.hdr"],
 	define: {
 		__VITE_BASE__: JSON.stringify("/figma-xr"),

@@ -41,6 +41,7 @@ authStore.checkLogin();
     </MenubarMenu>
   </Menubar>
   <main class="min-h-dvh">
+    <p v-if="authStore.error" role="alert" class="relative mt-16 p-4 text-destructive bg-background">{{ authStore.error }}</p>
     <router-view></router-view>
   </main>
 </template>

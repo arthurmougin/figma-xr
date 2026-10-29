@@ -77,6 +77,9 @@ export const useProjectStore = defineStore("project", () => {
 				if (!storedProject || storedProject.version !== data.version) {
 					updateProject(data);
 				}
+			}).catch((error) => {
+				// Keep cached projects when the network, permissions or quota fail.
+				console.warn("Could not refresh cached Figma project:", error.message);
 			});
 		});
 	}
@@ -88,34 +91,12 @@ export const useProjectStore = defineStore("project", () => {
 		const project = projects.value.get(projectId);
 		if (!project) throw new Error("Project not found");
 
-		const headers = new Headers({
-			Authorization: `Bearer ${await useAuthStore().access_token}`,
-		});
-
-		let imageResponse: GetImagesResponse | undefined = undefined;
-		let ids = idList.join(",");
-
-		try {
-			//list all ids as a string split by commas
-			const response = await fetch(
-				`https://api.figma.com/v1/images/${project.id}?ids=${ids}&format=png&scale=1`,
-				{
-					method: "get",
-					headers,
-				}
-			);
-			imageResponse = await response.json();
-
-			if (!imageResponse || imageResponse.err)
-				throw new Error(imageResponse?.err || "Unknown error");
-		} catch (e) {
-			console.error(e);
-			return await useAuthStore().refreshTokenAndRetry(
-				populateImagesFromProject,
-				projectId,
-				idList
-			);
-		}
+		const ids = idList.join(",");
+		const response = await useAuthStore().requestFigma(
+			`/v1/images/${project.id}?ids=${ids}&format=png&scale=1`,
+		);
+		const imageResponse: GetImagesResponse = await response.json();
+		if (imageResponse.err) throw new Error(imageResponse.err);
 
 		if (!imageResponse || !imageResponse.images)
 			throw new Error("No images found");
@@ -204,52 +185,33 @@ export const useProjectStore = defineStore("project", () => {
 
 async function fetchProject(id: string): Promise<PurgedProject> {
 	if (id == null) return Promise.reject("Invalid ID");
-	try {
-		const headers = new Headers({
-			Authorization: `Bearer ${useAuthStore().access_token || ""}`,
-		});
+	const response = await useAuthStore().requestFigma(`/v1/files/${id}?depth=3`);
 
-		const response: Response = await fetch(
-			`https://api.figma.com/v1/files/${id}?depth=3`,
-			{
-				method: "get",
-				headers,
-			}
-		);
+	const project: Project = await response.json();
+	project.id = id;
 
-		if (!response.ok) {
-			console.error("Failed to fetch project:", response.statusText);
-			throw new Error("Failed to fetch project: " + response.statusText);
-		}
-
-		const project: Project = await response.json();
-		project.id = id;
-
-		const storedProject = useProjectStore().projects.get(id);
-		if (storedProject && storedProject.version === project.version) {
-			return storedProject;
-		}
-
-		const purgedProject: PurgedProject = {
-			name: project.name,
-			lastModified: project.lastModified,
-			thumbnailUrl: project.thumbnailUrl,
-			version: project.version,
-			id: project.id,
-			images: new Map<string, TwickedFrameNode>(),
-		};
-		project.document.children.map((child) =>
-			child.children.map((grandchild) => {
-				purgedProject.images.set(grandchild.id, {
-					id: grandchild.id,
-					image: null,
-				});
-			})
-		);
-		return purgedProject;
-	} catch (e) {
-		return await useAuthStore().refreshTokenAndRetry(fetchProject, id);
+	const storedProject = useProjectStore().projects.get(id);
+	if (storedProject && storedProject.version === project.version) {
+		return storedProject;
 	}
+
+	const purgedProject: PurgedProject = {
+		name: project.name,
+		lastModified: project.lastModified,
+		thumbnailUrl: project.thumbnailUrl,
+		version: project.version,
+		id: project.id,
+		images: new Map<string, TwickedFrameNode>(),
+	};
+	project.document.children.map((child) =>
+		child.children.map((grandchild) => {
+			purgedProject.images.set(grandchild.id, {
+				id: grandchild.id,
+				image: null,
+			});
+		})
+	);
+	return purgedProject;
 }
 
 async function imgUrltoBase64(url: string): Promise<string | null> {

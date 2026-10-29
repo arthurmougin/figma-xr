@@ -36,12 +36,19 @@ jobs:
                   node-version: 24
                   cache: "npm"
             - name: Install dependencies
-              run: npm install
+              run: npm ci
+            - name: Test OAuth
+              run: npm test
+            - name: Check auth API configuration
+              env:
+                  AUTH_API_URL: ${{ vars.VITE_AUTH_API_URL }}
+              run: |
+                  test -n "$AUTH_API_URL" || { echo "Set the VITE_AUTH_API_URL repository variable (see docs/figma-oauth-migration.md)."; exit 1; }
             - name: Build
               run: npm run build
               env:
                   VITE_ID: ${{ secrets.VITE_ID }}
-                  VITE_SECRET: ${{ secrets.VITE_SECRET }}
+                  VITE_AUTH_API_URL: ${{ vars.VITE_AUTH_API_URL }}
             - name: Setup Pages
               uses: actions/configure-pages@v5
             - name: Upload artifact

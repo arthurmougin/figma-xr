@@ -3,21 +3,20 @@ import LandingPageVue from "./views/LandingPage.vue";
 import ProjectsVue from "./views/Projects.vue";
 import XRViewVue from "./views/XRView.vue";
 import { useAuthStore } from "./store/auth.store";
-import { LogStateOptions } from "./definition.d";
 
 const routes = [
 	{
-		path: import.meta.env.BASE_URL + "/",
+		path: "/",
 		name: "landingpage",
 		component: LandingPageVue,
 	},
 	{
-		path: import.meta.env.BASE_URL + "/projects",
+		path: "/projects",
 		name: "projects",
 		component: ProjectsVue,
 	},
 	{
-		path: import.meta.env.BASE_URL + "/view/:projectId",
+		path: "/view/:projectId",
 		name: "xrview",
 		component: XRViewVue,
 		props: true,
@@ -30,19 +29,20 @@ const routes = [
 ];
 
 const router = createRouter({
-	history: createWebHistory(),
+	history: createWebHistory(import.meta.env.BASE_URL),
 	routes,
 });
 router.beforeEach(async (to, _from) => {
 	const authStore = useAuthStore();
 
 	if (to.query.callback !== undefined) {
-		await authStore.initCallbackRoute(to);
+		const connected = await authStore.initCallbackRoute(to);
+		return { name: connected ? "projects" : "landingpage", replace: true };
 	}
 
 	if (to.name === "xrview" || to.name === "projects") {
 		//test if logged in
-		if (authStore.state === LogStateOptions["logged in"]) {
+		if (await authStore.checkLogin()) {
 			return true;
 		} else {
 			return { name: "landingpage" };
