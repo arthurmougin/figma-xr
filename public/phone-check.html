@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Figma XR · Phone connection</title>
+    <style>
+      body { margin:0; padding:24px; background:#09101a; color:#eef2fa; font:16px/1.5 system-ui; }
+      main { max-width:600px; margin:auto; }
+      h1 { font-size:24px; }
+      li { margin:14px 0; }
+      a { color:#c5cfff; }
+      .ok { color:#92e4c1; }
+      .fail { color:#ffb4a9; }
+      button { background:#6560e8; border:0; border-radius:8px; padding:12px; color:white; font:inherit; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Figma XR · Phone connection</h1>
+      <p>This small page loads without the app or its 3D engine.</p>
+      <ul aria-live="polite">
+        <li class="ok">Page: reached the computer over HTTPS.</li>
+        <li id="javascript">JavaScript: waiting…</li>
+        <li id="secure">Secure context: waiting…</li>
+        <li id="xr">WebXR: waiting…</li>
+        <li id="relay">Pairing relay: checking…</li>
+        <li id="socket">Live connection: checking…</li>
+      </ul>
+      <p id="result" role="status">Running checks…</p>
+      <noscript>JavaScript is disabled. Enable it in your browser and reload.</noscript>
+      <p><button onclick="location.reload()">Run again</button></p>
+      <p><a href="./companion">Open companion</a> · To pair, scan the plugin QR again.</p>
+    </main>
+    <script>
+      const show = (id, message, ok) => {
+        const element = document.getElementById(id);
+        element.textContent = message;
+        element.className = ok ? 'ok' : 'fail';
+      };
+      show('javascript', 'JavaScript: running.', true);
+      show('secure', isSecureContext
+        ? 'Secure context: available.'
+        : 'Secure context: unavailable. The phone needs trusted HTTPS for AR.', isSecureContext);
+      show('xr', navigator.xr
+        ? 'WebXR: API available (AR support is checked when entering AR).'
+        : 'WebXR: API unavailable in this browser. The catalog can still load.', !!navigator.xr);
+      async function relayCheck() {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        try {
+          // OPTIONS checks the pairing route/origin without creating a room.
+          const response = await fetch('/api/pair/rooms', {
+            method: 'OPTIONS', cache: 'no-store', signal: controller.signal,
+          });
+          if (response.status !== 204) throw new Error('HTTP ' + response.status);
+          show('relay', 'Pairing relay: reachable.', true);
+          return true;
+        } catch (error) {
+          show('relay', 'Pairing relay: failed (' + error.message + '). Keep dev:relay running and check its allowed origin.', false);
+          return false;
+        } finally { clearTimeout(timer); }
+      }
+      function socketCheck() {
+        return new Promise(resolve => {
+          let socket, timer;
+          const finish = ok => {
+            clearTimeout(timer);
+            if (socket) {
+              socket.onopen = socket.onerror = socket.onclose = null;
+              socket.close();
+            }
+            show('socket', ok ? 'Live connection: WebSocket reached the relay.'
+              : 'Live connection: blocked or relay unavailable.', ok);
+            resolve(ok);
+          };
+          timer = setTimeout(() => finish(false), 8000);
+          try {
+            const url = new URL('/api/pair/socket', location.origin);
+            url.protocol = 'wss:';
+            socket = new WebSocket(url);
+            socket.onopen = () => finish(true);
+            socket.onerror = socket.onclose = () => finish(false);
+          } catch { finish(false); }
+        });
+      }
+      Promise.all([relayCheck(), socketCheck()]).then(([relay, socket]) => {
+        document.getElementById('result').textContent = relay && socket
+          ? 'The phone can reach the app and relay. Open the companion or scan the plugin QR again. If it still stalls, report the exact text shown there.'
+          : 'The page is reachable, but pairing is failing. Report the failed check above.';
+      });
+    </script>
+  </body>
+</html>

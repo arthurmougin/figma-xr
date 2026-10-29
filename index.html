@@ -6,7 +6,23 @@
     <title>Figma XR</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="startup" style="padding:32px;font:16px system-ui;background:#09101a;color:#eef2fa;min-height:100vh;box-sizing:border-box">
+        <strong>Figma XR</strong>
+        <p role="status">Opening your companion…</p>
+        <p id="startup-help" hidden>The app is taking longer to start. <a href="%BASE_URL%phone-check.html" style="color:#c5cfff">Check the phone connection</a>, then reload this page.</p>
+        <noscript>Enable JavaScript in your browser to use Figma XR.</noscript>
+      </div>
+    </div>
+    <script>
+      function showStartupHelp() {
+        const help = document.getElementById('startup-help');
+        if (help) help.hidden = false;
+      }
+      setTimeout(showStartupHelp, 12000);
+      window.addEventListener('error', showStartupHelp, true);
+      window.addEventListener('unhandledrejection', showStartupHelp);
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

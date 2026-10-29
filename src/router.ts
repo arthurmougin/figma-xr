@@ -1,7 +1,4 @@
 import { createRouter, createWebHistory } from "vue-router";
-import LandingPageVue from "./views/LandingPage.vue";
-import ProjectsVue from "./views/Projects.vue";
-import XRViewVue from "./views/XRView.vue";
 import { useAuthStore } from "./store/auth.store";
 
 const routes = [
@@ -9,17 +6,17 @@ const routes = [
 	{
 		path: "/",
 		name: "landingpage",
-		component: LandingPageVue,
+		component: () => import("./views/LandingPage.vue"),
 	},
 	{
 		path: "/projects",
 		name: "projects",
-		component: ProjectsVue,
+		component: () => import("./views/Projects.vue"),
 	},
 	{
 		path: "/view/:projectId",
 		name: "xrview",
-		component: XRViewVue,
+		component: () => import("./views/XRView.vue"),
 		props: true,
 	},
 	{

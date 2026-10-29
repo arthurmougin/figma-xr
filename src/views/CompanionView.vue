@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { CompanionBridge } from "../companion/bridge";
-import { CompanionScene } from "../companion/scene";
+import type { CompanionScene } from "../companion/scene";
 const bridge = new CompanionBridge();
 const { items, status, desktop, storageError } = bridge;
 const canvas = ref<HTMLCanvasElement | null>(null),
   overlay = ref<HTMLElement | null>(null);
 const inXR = ref(false),
+  sceneReady = ref(false),
+  sceneError = ref(false),
   pending = ref(0),
   message = ref("Your Figma catalog, ready to place in space."),
   query = ref("");
 let scene: CompanionScene | null = null;
+let disposed = false;
+let preparing = false;
 const filtered = computed(() =>
   items.value.filter((item) =>
     item.name.toLowerCase().includes(query.value.toLowerCase()),
@@ -29,8 +33,14 @@ async function enterAR() {
       error instanceof Error ? error.message : "Could not enter AR.";
   }
 }
-onMounted(async () => {
-  if (canvas.value) {
+async function prepareScene() {
+  if (preparing || scene || disposed) return;
+  preparing = true;
+  sceneError.value = false;
+  message.value = "Preparing 3D… Your catalog can connect while it loads.";
+  try {
+    const { CompanionScene } = await import("../companion/scene");
+    if (disposed || !canvas.value) return;
     scene = new CompanionScene(canvas.value);
     scene.onStatus = (value) => (message.value = value);
     scene.onXR = (active) => {
@@ -39,12 +49,25 @@ onMounted(async () => {
     };
     scene.onClone = (id) => bridge.send({ type: "highlight", id });
     scene.onPending = (count) => (pending.value = count);
+    scene.updateCatalog(items.value);
+    scene.updateSnapshot(bridge.snapshot.value, bridge.viewportEpoch.value);
+    sceneReady.value = true;
+    message.value = "Your Figma catalog, ready to place in space.";
+  } catch {
+    if (disposed) return;
+    sceneError.value = true;
+    message.value = "Could not prepare 3D. Your catalog can still connect. Retry or check the phone connection.";
+  } finally {
+    preparing = false;
   }
-  await bridge.start();
-  scene?.updateCatalog(items.value);
-  scene?.updateSnapshot(bridge.snapshot.value, bridge.viewportEpoch.value);
+}
+onMounted(() => {
+  // Pairing and the catalog must not wait for the XR engine download or WebGL.
+  void bridge.start();
+  void prepareScene();
 });
 onBeforeUnmount(() => {
+  disposed = true;
   bridge.dispose();
   scene?.dispose();
 });
@@ -73,7 +96,7 @@ onBeforeUnmount(() => {
         </p>
         <p v-if="storageError" role="alert">{{ storageError }}</p>
         <div class="actions">
-          <button v-if="!inXR" class="primary" @click="enterAR">
+          <button v-if="!inXR" class="primary" :disabled="!sceneReady" @click="enterAR">
             Enter AR
           </button>
           <button v-else @click="scene?.recalibrate()">
@@ -82,7 +105,9 @@ onBeforeUnmount(() => {
           <button v-if="pending" @click="scene?.cancelPending()">
             Cancel {{ pending }} pending {{ pending === 1 ? "copy" : "copies" }}
           </button>
-          <button @click="scene?.clear()">Clear placed items</button>
+          <button v-if="sceneError" @click="prepareScene">Retry 3D</button>
+          <a v-if="sceneError" href="./phone-check.html">Check phone connection</a>
+          <button :disabled="!sceneReady" @click="scene?.clear()">Clear placed items</button>
           <button v-if="desktop" @click="bridge.send({ type: 'request-sync' })">
             Refresh catalog
           </button>
@@ -97,6 +122,7 @@ onBeforeUnmount(() => {
           <li v-for="item in filtered" :key="item.id">
             <button
               :aria-label="'Place ' + item.name"
+              :disabled="!sceneReady"
               @click="scene?.place(item)"
             >
               <img :src="item.image" alt="" /><span>{{ item.name }}</span>
@@ -195,6 +221,15 @@ button {
 .primary {
   background: #6560e8;
   border-color: #8f8bff;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.actions a {
+  color: #c5cfff;
+  align-self: center;
+  font-size: 13px;
 }
 .search {
   display: flex;

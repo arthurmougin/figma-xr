@@ -54,6 +54,10 @@ Connection fields should already be filled by the build. If the panel remains at
 
 If it reports that the pairing service is unreachable, keep `npm run dev:relay` and `npm run dev` running. The local desktop endpoint is `http://127.0.0.1:8787`; the phone endpoint uses the computer's HTTPS LAN address through Vite. These are intentionally different routes to the same relay. A loaded QR followed by a phone timeout is a network/firewall or phone HTTPS issue, separate from the controller startup.
 
+If the phone stalls while the desktop works, open `/figma-xr/phone-check.html` on the **same LAN hostname/IP as the QR**. This small standalone page checks JavaScript, secure-context/WebXR availability, the pairing route and WebSocket without downloading the 3D engine or creating a room. If even this page does not appear, check the phone's Wi-Fi, guest-network isolation, VPN routing, HTTPS certificate and the Windows firewall. If it appears, its individual results separate relay problems from browser/engine startup. Desktop success alone does not establish phone reachability. A phone without WebXR can still load its catalog.
+
+The companion renders its controls and starts catalog pairing independently of the 3D engine. Other app routes and the older viewer's inspector are loaded only when visited. While the engine downloads, catalog updates remain live and placement buttons show a disabled state. An engine failure offers **Retry 3D** and the connection check; the initial HTML also offers that check if the app has not mounted after twelve seconds.
+
 ## Experience
 
 Visible top-level frames, components, instances and groups become catalog entries. **Add selected items** adds nested elements, including offscreen selections. The catalog accumulates as you pan and is bounded to 256 items per pairing session. Search it on the phone and place any item repeatedly without returning to the desktop. The library works without a current screen match or a connected plugin.

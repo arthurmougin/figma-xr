@@ -2,6 +2,51 @@ import { test, expect } from "@playwright/test";
 import WebSocket from "ws";
 import { once } from "node:events";
 import { readFileSync, readdirSync } from "node:fs";
+test("catalog connects before the 3D engine finishes loading", async ({ page, request }) => {
+  test.skip(!!process.env.TEST_PRODUCTION, "Intercepts the development module URL");
+  let release!: () => void;
+  const engineDownload = new Promise<void>((resolve) => { release = resolve; });
+  const requests: string[] = [];
+  page.on("request", (req) => requests.push(new URL(req.url()).pathname));
+  await page.route("**/src/companion/scene.ts*", async (route) => {
+    await engineDownload;
+    await route.continue();
+  });
+  const response = await request.post("https://localhost:5173/api/pair/rooms", {
+    headers: { Origin: "null" },
+  });
+  expect(response.status()).toBe(201);
+  const pair = await response.json();
+  const desktop = new WebSocket("wss://localhost:5173/api/pair/socket", {
+    origin: "null", rejectUnauthorized: false,
+  });
+  try {
+    await once(desktop, "open");
+    desktop.send(JSON.stringify({ type: "join", role: "desktop", room: pair.room, token: pair.desktopToken }));
+    await page.goto("companion#" + new URLSearchParams({
+      room: pair.room, token: pair.phoneToken, relay: "https://localhost:5173",
+    }), { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Plugin connected · catalog updates live")).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("Preparing 3D");
+    await expect(page.getByRole("button", { name: "Enter AR", exact: true })).toBeDisabled();
+    expect(requests.some((path) => /XRView\.vue|Projects\.vue|babylon\/scene|@babylonjs_inspector/.test(path))).toBe(false);
+    release();
+    await expect(page.getByRole("button", { name: "Enter AR", exact: true })).toBeEnabled();
+  } finally {
+    release();
+    desktop.terminate();
+  }
+});
+test("phone connection check works without downloading the app", async ({ page }) => {
+  const scripts: string[] = [];
+  page.on("request", (req) => { if (req.resourceType() === "script") scripts.push(req.url()); });
+  await page.goto("phone-check.html");
+  await expect(page.getByText("Pairing relay: reachable.", { exact: true })).toBeVisible();
+  await expect(page.getByText("Live connection: WebSocket reached the relay.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("The phone can reach the app and relay");
+  // Vite adds its development client; no Vue, application or 3D modules are needed.
+  expect(scripts.every((url) => /@vite\/client|vite\/dist\/client\/env/.test(url))).toBe(true);
+});
 test("plugin pairing skips OAuth, applies edits and retains the catalog offline after reload", async ({
   page,
   request,
