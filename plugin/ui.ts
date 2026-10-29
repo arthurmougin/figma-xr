@@ -23,18 +23,28 @@ function send(packet: unknown) {
     socket.send(JSON.stringify(packet));
 }
 function connect() {
-  if (!room || stopped) return;
+  if (
+    !room ||
+    stopped ||
+    socket?.readyState === WebSocket.OPEN ||
+    socket?.readyState === WebSocket.CONNECTING
+  )
+    return;
   const url = new URL("/api/pair/socket", relay.value);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  socket = new WebSocket(url);
-  socket.onopen = () =>
-    send({
-      type: "join",
-      role: "desktop",
-      room: room!.room,
-      token: room!.desktopToken,
-    });
-  socket.onmessage = (event) => {
+  const active = new WebSocket(url);
+  socket = active;
+  active.onopen = () =>
+    active.send(
+      JSON.stringify({
+        type: "join",
+        role: "desktop",
+        room: room!.room,
+        token: room!.desktopToken,
+      }),
+    );
+  active.onmessage = (event) => {
+    if (active !== socket) return;
     let packet;
     try {
       packet = JSON.parse(event.data);
@@ -52,7 +62,9 @@ function connect() {
     }
     if (packet.type === "error") status(packet.message);
   };
-  socket.onclose = (event) => {
+  active.onclose = (event) => {
+    if (active !== socket) return;
+    socket = null;
     status(
       event.code === 1008
         ? "Pairing expired or already in use. Create a new session."
@@ -60,8 +72,12 @@ function connect() {
     );
     if (event.code !== 1008 && !stopped) setTimeout(connect, 1500);
   };
-  socket.onerror = () =>
-    status("Cannot reach the relay. Check its HTTPS address and certificate.");
+  active.onerror = () => {
+    if (active === socket)
+      status(
+        "Cannot reach the relay. Check its HTTPS address and certificate.",
+      );
+  };
 }
 $("pair").onclick = async () => {
   try {
@@ -74,6 +90,7 @@ $("pair").onclick = async () => {
       throw new Error("Use an HTTPS relay address.");
     stopped = true;
     socket?.close();
+    socket = null;
     room = null;
     const response = await fetch(new URL("/api/pair/rooms", relayUrl), {
       method: "POST",

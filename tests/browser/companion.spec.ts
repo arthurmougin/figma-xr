@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import WebSocket from "ws";
 import { once } from "node:events";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 test("plugin pairing skips OAuth, applies edits and retains the catalog offline after reload", async ({
   page,
   request,
@@ -194,4 +194,74 @@ test("OpenCV worker initializes and extracts natural features in the browser", a
     }
   }, workerUrl);
   expect(count).toBeGreaterThan(100);
+});
+
+test("plugin QR panel pairs from an opaque iframe and forwards Figma image exports", async ({
+  page,
+  context,
+}) => {
+  const html = readFileSync("plugin/dist/ui.html", "utf8");
+  await page.goto("companion");
+  await page.evaluate((html) => {
+    const iframe = document.createElement("iframe");
+    iframe.id = "plugin";
+    iframe.setAttribute("sandbox", "allow-scripts");
+    iframe.srcdoc = html;
+    document.body.replaceChildren(iframe);
+  }, html);
+  const frame = page.frameLocator("#plugin");
+  await frame.getByRole("button", { name: "Pair phone", exact: true }).click();
+  await expect(
+    frame.getByRole("link", { name: "Open companion", exact: true }),
+  ).toBeVisible();
+  const href = await frame
+    .getByRole("link", { name: "Open companion", exact: true })
+    .getAttribute("href");
+  const phone = await context.newPage();
+  await phone.goto(href!);
+  await expect(
+    frame.getByText("Phone connected", { exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 120;
+    canvas.height = 80;
+    const c = canvas.getContext("2d")!;
+    c.fillStyle = "teal";
+    c.fillRect(0, 0, 120, 80);
+    const image = Uint8Array.from(
+      atob(canvas.toDataURL().split(",")[1]),
+      (char) => char.charCodeAt(0),
+    );
+    (
+      document.querySelector("#plugin") as HTMLIFrameElement
+    ).contentWindow!.postMessage(
+      {
+        pluginMessage: {
+          type: "catalog-bytes",
+          items: [
+            {
+              id: "from-plugin",
+              name: "Plugin export",
+              pageId: "p",
+              version: 1,
+              width: 120,
+              height: 80,
+              updatedAt: Date.now(),
+              image,
+            },
+          ],
+        },
+      },
+      "*",
+    );
+  });
+  await expect(
+    phone.getByRole("button", { name: "Place Plugin export", exact: true }),
+  ).toBeVisible();
+  await page.close();
+  await expect(
+    phone.getByText("Plugin offline · saved catalog ready"),
+  ).toBeVisible();
+  await phone.close();
 });
