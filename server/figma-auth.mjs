@@ -83,7 +83,8 @@ export function createAuthServer(config, fetcher = fetch) {
       body.set('code_verifier', input.code_verifier);
     } else {
       if (!isString(input.refresh_token)) return send(400, { error: 'invalid_request' });
-      endpoint = 'https://api.figma.com/v1/oauth/refresh';
+      endpoint = 'https://api.figma.com/v1/oauth/token';
+      body.set('grant_type', 'refresh_token');
       body.set('refresh_token', input.refresh_token);
     }
     try {

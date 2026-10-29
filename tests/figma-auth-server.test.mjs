@@ -37,9 +37,10 @@ test('code exchange uses Basic auth, form body, current endpoint and PKCE', asyn
   assert.deepEqual(await response.json(), { access_token: 'access', refresh_token: 'refresh', expires_in: 3600 });
 });
 
-test('refresh uses /oauth/refresh and does not require a replacement refresh token', async (t) => {
+test('refresh uses the migrated /oauth/token grant and retains the existing refresh token', async (t) => {
   const post = await withServer(t, async (url, options) => {
-    assert.equal(url, 'https://api.figma.com/v1/oauth/refresh');
+    assert.equal(url, 'https://api.figma.com/v1/oauth/token');
+    assert.equal(new URLSearchParams(options.body).get('grant_type'), 'refresh_token');
     assert.equal(new URL(url).search, '');
     assert.equal(new URLSearchParams(options.body).get('refresh_token'), 'refresh+token');
     return Response.json({ access_token: 'new', expires_in: 3600 });

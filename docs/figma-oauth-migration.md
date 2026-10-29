@@ -4,11 +4,15 @@ Vérifié le 29 octobre 2026 dans la documentation officielle Figma.
 
 ## Ce que l’inspection a trouvé
 
-Le dépôt utilisait déjà les scopes granulaires `current_user:read` et `file_content:read`, et le nouvel endpoint d’échange. Les problèmes de code étaient ailleurs : paramètres placés dans l’URL au lieu du corps du POST, renouvellement envoyé à `/oauth/token` au lieu de `/oauth/refresh`, expiration calculée avec une mauvaise unité au premier échange, état OAuth généré avec `Math.random()`, et tentatives de renouvellement même sur des erreurs réseau, 403 et 429. La route pouvait aussi lancer une navigation pendant sa propre garde.
+Le dépôt utilisait déjà les scopes granulaires `current_user:read` et `file_content:read`, et le nouvel endpoint d’échange. Les problèmes de code étaient ailleurs : paramètres placés dans l’URL au lieu du corps du POST, expiration calculée avec une mauvaise unité au premier échange, état OAuth généré avec `Math.random()`, et tentatives de renouvellement même sur des erreurs réseau, 403 et 429. La route pouvait aussi lancer une navigation pendant sa propre garde.
 
 Le workflow de déploiement injectait `VITE_SECRET` dans le frontend. Les variables `VITE_*` sont publiques après compilation : l’ancien secret doit être considéré comme exposé et remplacé. Le nouveau secret est utilisé exclusivement par `server/figma-auth.mjs`.
 
 Figma exige aussi la republication des anciennes applications depuis le 17 novembre 2025. Le statut de ton application et son éventuel message « Update required » ne sont pas visibles depuis le dépôt : il faut les vérifier dans ton compte.
+
+## Renouvellement : deux pages officielles se contredisent
+
+La page OAuth apps décrit encore `/v1/oauth/refresh`, mais le changelog Figma du **16 mai 2025** annonce explicitement sa migration vers `/v1/oauth/token`. Le relais suit cette migration : `POST /v1/oauth/token`, authentification Basic, corps formulaire `grant_type=refresh_token&refresh_token=...`. L’ancienne route est annoncée comme maintenue temporairement. Le chemin local `/api/figma/refresh` reste une route interne du relais, indépendante du chemin amont Figma.
 
 ## 1. Ouvrir et mettre à jour l’application Figma
 
@@ -45,16 +49,18 @@ Dans **Publish**, choisis selon l’usage :
 
 Pour une soumission publique, les instructions de test peuvent être : ouvrir l’application, se connecter à Figma, coller le lien d’un fichier Figma Design accessible contenant des frames, ouvrir le projet, puis vérifier le rendu des panneaux en 3D. Préciser qu’un casque compatible est nécessaire pour tester le mode immersif ; ne pas présenter des fonctions qui ne sont pas implémentées. Préparer un fichier de démonstration accessible au reviewer. Attendre d’avoir une URL fonctionnelle du relais et un parcours testé avant de soumettre la version publique.
 
-## 2. Régénérer le secret et le garder côté serveur
+## 2. Remplacer le secret exposé et le garder côté serveur
 
-Dans les identifiants OAuth de l’application, utilise la fonction de régénération du **Client Secret**. Si le secret n’est plus récupérable, génère un remplacement avec les contrôles proposés par Figma. Si tu crées une nouvelle application, Figma affiche le secret à sa création : conserve-le immédiatement dans un gestionnaire de secrets.
+La documentation officielle indique que le **Client Secret** est affiché une seule fois lors de la création de l’application. Elle ne documente pas de bouton permettant de le régénérer sur une application existante. Ne pas confondre ce secret avec un personal access token ou un plan access token, dont les contrôles sont différents.
 
-- Garde le **Client ID** : c’est un identifiant public, utilisé des deux côtés.
+Si aucun contrôle de remplacement n’est proposé dans les identifiants de l’application, deux voies restent possibles : demander au support Figma la procédure de remplacement pour conserver cette application, ou créer une nouvelle application OAuth pour obtenir un nouveau couple Client ID / Client Secret. Cette seconde voie est documentée pour l’émission des identifiants ; elle impose de recopier les callbacks et scopes, de mettre à jour le Client ID des deux côtés et de refaire le parcours de publication. Ne pas supprimer l’ancienne application avant que sa remplaçante soit configurée et testée. Prévoir ensuite sa désactivation avec Figma, car créer une nouvelle application ne révoque pas le secret de l’ancienne.
+
+- Le **Client ID** est public et doit être identique des deux côtés. Il change si une nouvelle application est créée.
 - Place le nouveau **Client Secret** dans `FIGMA_CLIENT_SECRET` du serveur uniquement.
 - Supprime l’ancien secret GitHub Actions nommé `VITE_SECRET`.
 - Ne colle pas le secret dans le chat, le code, une issue ou une PR.
 
-La rotation invalide l’ancien secret pour l’échange et le renouvellement. Le frontend demande une nouvelle connexion après migration : l’ancien stockage `localStorage.auth` est supprimé. Les nouvelles sessions sont conservées dans `sessionStorage`, par onglet. Les jetons utilisateur restent accessibles au JavaScript de cet onglet ; ce relais n’est pas une implémentation de sessions serveur avec cookies HttpOnly.
+Le remplacement doit aussi prévoir la révocation de l’ancien secret ou de l’ancienne application avec Figma ; sa révocation n’est pas déduite de la création de nouveaux identifiants. Le frontend demande une nouvelle connexion après migration : l’ancien stockage `localStorage.auth` est supprimé. Les nouvelles sessions sont conservées dans `sessionStorage`, par onglet. Les jetons utilisateur restent accessibles au JavaScript de cet onglet ; ce relais n’est pas une implémentation de sessions serveur avec cookies HttpOnly.
 
 ## 3. Tester en local
 
@@ -140,5 +146,6 @@ Le déploiement du relais et la republication dans Figma doivent être terminés
 - [OAuth apps : création, configuration, PKCE, échange et renouvellement](https://developers.figma.com/docs/rest-api/oauth-apps/)
 - [Republication des anciennes applications et migration des scopes](https://developers.figma.com/docs/rest-api/republish-oauth-apps/)
 - [Changements de la plateforme développeur](https://developers.figma.com/docs/updates-to-figmas-developer-platform/)
+- [Changelog : migration du renouvellement du 16 mai 2025](https://developers.figma.com/docs/rest-api/changelog/#may-16-2025)
 - [Scopes](https://developers.figma.com/docs/rest-api/scopes/)
 - [Endpoints des fichiers et des images](https://developers.figma.com/docs/rest-api/file-endpoints/)
