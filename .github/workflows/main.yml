@@ -37,13 +37,8 @@ jobs:
                   cache: "npm"
             - name: Install dependencies
               run: npm ci
-            - name: Test OAuth
+            - name: Test
               run: npm test
-            - name: Check auth API configuration
-              env:
-                  AUTH_API_URL: ${{ vars.VITE_AUTH_API_URL }}
-              run: |
-                  test -n "$AUTH_API_URL" || { echo "Set the VITE_AUTH_API_URL repository variable (see docs/figma-oauth-migration.md)."; exit 1; }
             - name: Build
               run: npm run build
               env:

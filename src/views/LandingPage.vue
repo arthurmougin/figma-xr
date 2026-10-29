@@ -7,6 +7,7 @@ import CTA from "../components/CTA.vue";
     <h3 class="text-primary-foreground font-serif text-4xl font-medium">Elevate Your Design Prototyping into the XR
       Realm</h3>
     <CTA></CTA>
+    <router-link :to="{name:'companion'}" class="mt-4 underline text-primary-foreground">Open plugin companion / saved catalog</router-link>
   </article>
   <article id="description" class="h-screen flex flex-col justify-center items-start space-y-4 pl-10">
     <h2 class="font-serif text-2xl font-medium">What is Figma-xr?</h2>
@@ -28,7 +29,7 @@ import CTA from "../components/CTA.vue";
   <article id="how" class="h-screen  flex flex-col justify-center items-start space-y-4 pl-10">
     <h2 class="font-serif text-2xl font-medium">How to Use it ?</h2>
     <p>
-      First, you connect to your Figma account. From which you can add your best projects. Open one, and that's it !
+      Open the Figma XR plugin in your file and scan its QR code to bring your catalog to the phone. You can also connect your Figma account to use the project browser.
     </p>
   </article>
   <footer class="bg-foreground">

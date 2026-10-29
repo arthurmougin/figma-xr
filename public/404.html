@@ -1,5 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>Figma XR</title>
 <script>
-	const path = window.location.pathname.slice(1);
-	localStorage.setItem("path", path);
-	window.location.href = "../figma-xr/";
+  // GitHub Pages history fallback, including the QR's fragment credentials.
+  const base = '/figma-xr/';
+  if (location.pathname.startsWith(base)) {
+    sessionStorage.setItem('figma-xr-route', '/' + location.pathname.slice(base.length) + location.search + location.hash);
+    location.replace(base);
+  }
 </script>

@@ -16,10 +16,12 @@ pinia.use(({ store }) => {
 pinia.use(piniaPluginPersistedstate);
 app.use(pinia);
 app.use(router);
-app.mount("#app");
-
-const path = localStorage.getItem("path");
-if (path) {
-	localStorage.removeItem("path");
-	router.push(path);
+const restored = sessionStorage.getItem("figma-xr-route");
+sessionStorage.removeItem("figma-xr-route");
+localStorage.removeItem("path"); // Retire the old Pages fallback.
+async function mount() {
+  if (restored?.startsWith("/") && !restored.startsWith("//")) await router.replace(restored);
+  await router.isReady();
+  app.mount("#app");
 }
+void mount();

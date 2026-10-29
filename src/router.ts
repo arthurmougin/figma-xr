@@ -5,6 +5,7 @@ import XRViewVue from "./views/XRView.vue";
 import { useAuthStore } from "./store/auth.store";
 
 const routes = [
+	{path: "/companion", name: "companion", component: () => import("./views/CompanionView.vue")},
 	{
 		path: "/",
 		name: "landingpage",

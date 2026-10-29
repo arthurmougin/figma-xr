@@ -9,12 +9,12 @@ const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 //login check
-authStore.checkLogin();
+if (!location.pathname.endsWith("/companion")) authStore.checkLogin();
 
 </script>
 
 <template>
-  <Menubar class="absolute top-0 p-0 left-0 right-0 z-50 w-full inline-flex justify-between box-border ">
+  <Menubar v-if="route.name !== 'companion'" class="absolute top-0 p-0 left-0 right-0 z-50 w-full inline-flex justify-between box-border ">
     <MenubarMenu>
       <MenubarTrigger>
         <router-link :to="{ name: 'projects' }">
@@ -41,7 +41,7 @@ authStore.checkLogin();
     </MenubarMenu>
   </Menubar>
   <main class="min-h-dvh">
-    <p v-if="authStore.error" role="alert" class="relative mt-16 p-4 text-destructive bg-background">{{ authStore.error }}</p>
+    <p v-if="authStore.error && route.name !== 'companion'" role="alert" class="relative mt-16 p-4 text-destructive bg-background">{{ authStore.error }}</p>
     <router-view></router-view>
   </main>
 </template>

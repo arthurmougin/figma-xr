@@ -1,0 +1,12 @@
+{
+  "name": "Figma XR Companion",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "Pairs with a user-configured Figma XR companion relay to send only the current canvas preview and exported design items. Camera images never leave the phone."
+  }
+}

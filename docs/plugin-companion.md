@@ -1,0 +1,99 @@
+# Figma plugin companion (experimental)
+
+This adds an optional plugin route to the existing Figma XR app. The OAuth project browser stays available. The plugin route requires no OAuth application, client ID, client secret, or personal access token: a plugin running in an open Figma file supplies its own exports.
+
+## Run locally
+
+Use Node 24 and two terminals in the repository:
+
+```sh
+npm ci
+npm run build:plugin
+npm run dev:relay
+```
+
+```sh
+npm run dev
+```
+
+`dev:relay` works without `.env.auth`. If OAuth credentials are present, it also serves the existing OAuth endpoints. The Vite server forwards `/api/pair` HTTP and WebSocket traffic to the relay on port 8787. Do not expose the plain HTTP relay directly; use HTTPS/WSS through a reverse proxy or the development server.
+
+The companion is at `/figma-xr/companion`. A link on the landing page also opens the most recently saved catalog.
+
+## Load the plugin
+
+1. In Figma desktop, open a design file. Use **Plugins → Development → Import plugin from manifest** and select `plugin/manifest.json` from this checkout. The preceding build creates the ignored `plugin/dist` files it references.
+2. Run **Figma XR Companion** from Development plugins. No Community publication is needed for development. Figma assigns a plugin ID when you create/publish a plugin; this is separate from an OAuth client ID.
+3. Enter the companion website's **HTTPS** address, including `/figma-xr/`. It must be reachable from the phone. `https://localhost:5173/figma-xr/` is useful for desktop testing but refers to the phone itself when scanned there. Use a LAN hostname/IP with a trusted certificate, or your HTTPS tunnel/deployment.
+4. Enter the relay's HTTPS origin if it differs from the website. Otherwise leave it blank. Its proxy must forward `/api/pair/rooms` and WebSocket upgrades at `/api/pair/socket`.
+5. For an additional companion origin, add its exact origin to `FIGMA_ALLOWED_ORIGINS` in `.env.auth`, then restart the relay. Figma's sandbox UI uses the opaque `null` origin, which pairing explicitly accepts. OAuth retains its separate, stricter origin checks.
+6. Click **Pair phone** and scan the QR. The plugin must stay running for live edits and screen picking. The phone retains catalog images after disconnecting and reloads them from IndexedDB.
+
+The development manifest permits configurable network destinations. Before a Community release, restrict `networkAccess.allowedDomains` to the production relay and move localhost destinations to `devAllowedDomains`.
+
+## Experience
+
+Visible top-level frames, components, instances and groups become catalog entries. **Add selected items** adds nested elements, including offscreen selections. The catalog accumulates as you pan and is bounded to 256 items per pairing session. Search it on the phone and place any item repeatedly without returning to the desktop. The library works without a current screen match or a connected plugin.
+
+Enter AR, then tap **Scan desktop**. Aim at the Figma canvas and translate the phone slightly sideways. Once the canvas is located, tap inside an eligible visible item to clone it at the screen. Stop scanning to manipulate placed objects. Tap catalog entries for free placement, drag copies to move them and pinch to scale. Copies have their own textures and do not change when the Figma source is edited. Clearing placed items leaves the catalog intact. Placed objects are session-local; the catalog is the persisted part.
+
+## What the homography does
+
+The viewport export is one flat reference image. ORB descriptors match distinctive details in that image to camera pixels. RANSAC rejects inconsistent matches and estimates a 3×3 homography `H`:
+
+```text
+cameraPixel ~ H × referencePixel
+referencePixel ~ inverse(H) × cameraPixel
+```
+
+The homogeneous division accounts for perspective: a rectangular viewport can appear as a trapezoid. Reference pixels map linearly to document coordinates through the exported viewport bounds. Selection uses containing paint bounds and paint order; a tap on empty space does not choose a nearby frame.
+
+A homography alone does **not** establish physical monitor size or metric depth. This prototype associates the same reference features across synchronized WebXR camera frames, triangulates them using translated XR camera poses, and fits a metric screen plane. Rotation alone cannot provide that depth. It requires at least a 2.5 cm baseline, enough well-spread consistent features, a plausible aspect ratio and a low fitting residual. Two consistent plane estimates are needed before accepting a pose. A screen tap then intersects the XR input ray with that plane and resolves the item in document coordinates.
+
+Screen location is held fixed after acquisition and verified by reprojection against fresh matches. Three inconsistent checks discard it. A pick requires a fresh accepted match (under 900 ms old). Placed clones never follow successive homography estimates. WebXR anchors are used when available; otherwise copies retain their world transforms. Moving the monitor requires reacquisition.
+
+## Edits and feature-map revisions
+
+The plugin listens to the current page's `nodechange` event. Changes dirty affected catalog exports, including exported ancestors of edited children. Movement of an exported node updates placement without re-exporting that node's own pixels; movement inside an exported ancestor dirties the ancestor. Deleted nodes are removed from the catalog; already placed copies remain snapshots. Offscreen cached items are re-exported when dirty.
+
+Visible changes and viewport pan/zoom immediately invalidate picking. After a short debounce, the plugin publishes updated catalog assets and a new bounded viewport PNG with matching document bounds, item versions and a monotonic revision. Exports that race with edits are retried. The phone ignores stale matching results, rebuilds descriptors for the new viewport image and reacquires the screen pose. This first implementation rebuilds the visible viewport's descriptors rather than maintaining a per-tile incremental feature index; it does not re-index the whole document.
+
+The viewport PNG is exported through a temporary SliceNode, removed in `finally`. This preserves overlaps and clipping in the visible composition. There are no permanent helper markers, but these transient document operations may affect undo history and should be validated with collaboration and large files before release.
+
+## Tracking a monitor
+
+Printed targets are not a requirement for planar feature matching. Displays introduce additional acquisition problems: moire from the camera/display pixel grids, flicker banding, glare, blur, and repeated or low-detail UI. These may reduce matches or produce unstable estimates. The worker uses a slightly blurred grayscale image, descriptor ratio tests, RANSAC, spread and reprojection thresholds. Matching runs in a worker on bounded images; raw camera frames never go through the relay.
+
+Those measures do not guarantee a match on every screen. The UI declines picking when confidence is insufficient. Catalog placement and already placed clones remain usable. Actual phone/monitor acquisition rate, latency, alignment error, camera-texture orientation and long-session anchor behavior still require physical-device validation. No claim of production-quality screen tracking is made from synthetic tests.
+
+Current picking uses axis-aligned exported bounds. Rotated top-level nodes are available in the catalog but excluded from screen picking. Overlapping transparent shapes are selected by their bounds, not by a pixel-alpha hit test. Prototyping supports exported flat panels, not reconstruction of 3D geometry from arbitrary Figma artwork.
+
+## Relay and deployment
+
+Pairing creates random room and separate desktop/phone capability tokens. WebSocket credentials are sent in the first message, not the WebSocket URL. The QR's phone token is in its fragment; the app removes it from the visible address and retains it in session storage for reloads. Keep the QR private. The phone cannot publish document assets. Sessions expire after one hour without activity; catalog images remain in the phone browser. Each room is bounded to 256 catalog items / 60 MB, with message and socket backpressure limits. This in-memory relay is for a small prototype, not a hardened multi-tenant public upload service.
+
+GitHub Pages can host the app and its worker, but cannot host the relay. Configure the plugin with the separately hosted HTTPS/WSS relay. The Pages 404 fallback preserves the companion route and pairing fragment. No OAuth build variables are required for the companion. OAuth login still requires its existing configuration.
+
+## Validation
+
+```sh
+npm test
+npm run build
+# With the relay and Vite running, plus a Playwright browser installed:
+npm run test:browser
+# Windows with Google Chrome installed:
+# $env:PLAYWRIGHT_CHANNEL='chrome'; npm.cmd run test:browser
+```
+
+Unit/integration tests exercise actual OpenCV perspective matching, reference invalidation, metric geometry, degenerate motion rejection, pose gating, relay authorization, asset revisions, deletion and reconnection. Browser tests cover anonymous pairing, placement, edited catalog assets, offline persistence and OpenCV worker initialization. An actual Figma session and physical WebXR session remain necessary acceptance tests.
+
+## References
+
+- [Figma plugin manifest](https://developers.figma.com/docs/plugins/manifest/)
+- [Figma viewport](https://developers.figma.com/docs/plugins/api/figma-viewport/)
+- [Figma node exports](https://developers.figma.com/docs/plugins/api/properties/nodes-exportasync/)
+- [Page nodechange events](https://developers.figma.com/docs/plugins/api/properties/PageNode-on/)
+- [OpenCV feature matching and homography](https://docs.opencv.org/4.13.0/d1/de0/tutorial_py_feature_homography.html)
+- [WebXR raw camera access](https://immersive-web.github.io/raw-camera-access/)
+- [WebXR anchors](https://immersive-web.github.io/anchors/)
+- [Screen-camera moire and flicker-banding research](https://libozhu03.github.io/CLEAR/)

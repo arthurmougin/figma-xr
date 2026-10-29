@@ -39,8 +39,8 @@ async function readJson(req) {
   return data;
 }
 
-export function createAuthServer(config, fetcher = fetch) {
-  return createServer(async (req, res) => {
+export function createAuthHandler(config, fetcher = fetch) {
+  return async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const send = (status, data) => {
@@ -118,7 +118,11 @@ export function createAuthServer(config, fetcher = fetch) {
     } catch {
       return send(502, { error: 'figma_unavailable' });
     }
-  });
+  };
+}
+
+export function createAuthServer(config, fetcher = fetch) {
+  return createServer(createAuthHandler(config, fetcher));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

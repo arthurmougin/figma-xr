@@ -21,7 +21,10 @@ export default defineConfig({
 		},
 		port: 5173,
 		strictPort: true,
-		proxy: { "/api/figma": "http://127.0.0.1:8787" },
+		proxy: {
+			"/api/figma": "http://127.0.0.1:8787",
+			"/api/pair": { target: "http://127.0.0.1:8787", ws: true },
+		},
 	},
 	resolve: {
 		alias: {

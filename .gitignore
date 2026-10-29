@@ -30,3 +30,7 @@ dist-ssr
 !.env.auth.example
 certs/
 *.tsbuildinfo
+
+plugin/dist/
+test-results/
+playwright-report/
