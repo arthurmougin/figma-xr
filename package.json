@@ -8,7 +8,10 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "serveo": "ssh -R 80:localhost:5173 serveo.net",
-    "adb_connect": "bash ./scripts/adb-wifi.sh"
+    "adb_connect": "bash ./scripts/adb-wifi.sh",
+    "dev:auth": "node --env-file=.env.auth server/figma-auth.mjs",
+    "start:auth": "node server/figma-auth.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^8.17.1",
@@ -43,5 +46,8 @@
   },
   "eslintConfig": {
     "no-unused-vars": "error"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   }
 }

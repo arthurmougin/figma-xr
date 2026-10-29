@@ -3,7 +3,7 @@
 interface ImportMetaEnv {
 	readonly VITE_APP_TITLE: string;
 	readonly VITE_ID: string;
-	readonly VITE_SECRET: string;
+	readonly VITE_AUTH_API_URL?: string;
 	// more env variables...
 }
 
