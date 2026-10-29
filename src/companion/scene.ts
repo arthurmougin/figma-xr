@@ -19,14 +19,15 @@ import {
   RenderTargetTexture,
   CopyTextureToTexture,
   type IWebXRAnchor,
+  Ray as BabylonRay,
 } from "@babylonjs/core";
 import { ViewportTracker } from "./tracker";
+import { PendingTaps, type TapOutcome } from "./pending-taps";
+import { TapFeedback } from "./tap-feedback";
 import {
   ScreenCalibrator,
   StableScreen,
   planeError,
-  pickItem,
-  intersectScreen,
   screenPosition,
   unit,
   cross,
@@ -63,9 +64,15 @@ export class CompanionScene {
   private meshes: Mesh[] = [];
   private objectAnchors = new Map<Mesh, IWebXRAnchor>();
   private anchorEpoch = new Map<Mesh, number>();
+  private taps = new PendingTaps();
+  private feedback: TapFeedback;
+  private canvasEpoch = 0;
+  private trackingEpoch = 0;
+  private pendingCount = 0;
   onStatus: (status: string) => void = () => {};
   onXR: (active: boolean) => void = () => {};
   onClone: (id: string) => void = () => {};
+  onPending: (count: number) => void = () => {};
   private resize = () => this.engine.resize();
   constructor(canvas: HTMLCanvasElement) {
     this.engine = new Engine(canvas, true, {
@@ -84,35 +91,49 @@ export class CompanionScene {
     this.camera.setTarget(new Vector3(0, 0, -1));
     this.camera.attachControl(canvas, true);
     this.copy = new CopyTextureToTexture(this.engine);
+    this.feedback = new TapFeedback(this.scene);
+    this.scene.onBeforeRenderObservable.add(() => this.processTaps());
     this.engine.runRenderLoop(() => this.scene.render());
     window.addEventListener("resize", this.resize);
   }
   updateCatalog(items: CatalogItem[]) {
     this.items = new Map(items.map((item) => [item.id, item]));
   }
-  updateSnapshot(snapshot: ViewportSnapshot | null) {
+  updateSnapshot(
+    snapshot: ViewportSnapshot | null,
+    canvasEpoch = this.canvasEpoch,
+  ) {
+    if (this.snapshot === snapshot && this.canvasEpoch === canvasEpoch) return;
+    this.canvasEpoch = canvasEpoch;
+    this.handleTapOutcomes(this.taps.setReference(snapshot, canvasEpoch));
     this.snapshot = snapshot;
-    this.resetScreen();
+    this.resetScreen(false);
     if (!snapshot) {
       this.tracker?.clear();
-      if (this.scanning)
-        this.onStatus(
-          "Canvas changed or plugin disconnected. Waiting for the current view…",
-        );
+      if (this.scanning) this.trackingStatus("Waiting for the current canvas…");
       return;
     }
     if (this.scanning) this.loadReference(snapshot);
   }
-  private resetScreen() {
+  private resetScreen(cancel = true) {
+    this.trackingEpoch++;
     this.calibrator.reset();
     this.stable.reset();
     this.matchedAt = 0;
+    if (cancel) this.handleTapOutcomes(this.taps.cancel("reset"));
+  }
+  private trackingStatus(message: string) {
+    this.onStatus(
+      this.taps.pending.length
+        ? `Locating ${this.taps.pending.length === 1 ? "tapped item" : this.taps.pending.length + " tapped items"}… ${message}`
+        : message,
+    );
   }
   private loadReference(snapshot: ViewportSnapshot) {
     if (!this.tracker) {
       this.tracker = new ViewportTracker();
       this.tracker.onStatus = (status) => {
-        if (this.scanning) this.onStatus(status);
+        if (this.scanning) this.trackingStatus(status);
       };
     }
     void this.tracker
@@ -151,19 +172,43 @@ export class CompanionScene {
         this.inXR = true;
         this.scene.clearColor.a = 0;
         this.onXR(true);
-        session.addEventListener("select", (event) => {
-          if (!this.scanning) return;
+        const starts = new WeakMap<XRInputSource, Ray | null>();
+        const readRay = (event: XRInputSourceEvent): Ray | null => {
           const pose = event.frame.getPose(
             event.inputSource.targetRaySpace,
             manager.referenceSpace,
           );
-          if (!pose) return;
+          if (!pose) return null;
           const m = pose.transform.matrix;
-          this.pickFromScreen({
+          return {
             origin: [m[12], m[13], m[14]],
             direction: unit([-m[8], -m[9], -m[10]]),
-          });
+          };
+        };
+        session.addEventListener("selectstart", (event) => {
+          const ray = readRay(event);
+          if (!ray) {
+            starts.delete(event.inputSource);
+            return;
+          }
+          const hit =
+            ray &&
+            this.scene.pickWithRay(
+              new BabylonRay(vector(ray.origin), vector(ray.direction)),
+              (mesh) => this.meshes.includes(mesh as Mesh),
+            );
+          // A gesture that started on a placed object belongs to manipulation.
+          starts.set(event.inputSource, hit?.hit ? null : ray);
         });
+        session.addEventListener("select", (event) => {
+          const ray = starts.has(event.inputSource)
+            ? starts.get(event.inputSource)
+            : readRay(event);
+          if (ray) this.queueTap(ray);
+        });
+        session.addEventListener("selectend", (event) =>
+          starts.delete(event.inputSource),
+        );
       });
       manager.onXRSessionEnded.add(() => {
         this.inXR = false;
@@ -184,14 +229,15 @@ export class CompanionScene {
         domOverlay: { root },
       },
     );
-    this.onStatus(
-      "Tap a catalog item to place it, or scan your desktop canvas.",
-    );
+    this.setScanning(true);
+    if (this.scanning)
+      this.onStatus(
+        "Tap the desktop at any time to copy an item, or place one from your catalog.",
+      );
   }
   setScanning(enabled: boolean) {
     this.scanning = enabled;
-    for (const mesh of this.meshes) mesh.isPickable = !enabled;
-    this.resetScreen();
+    this.resetScreen(false);
     if (enabled) {
       if (!this.inXR) {
         this.scanning = false;
@@ -211,6 +257,59 @@ export class CompanionScene {
       this.onStatus(
         "Tap a catalog item to place another copy. Drag or pinch placed items.",
       );
+  }
+  recalibrate() {
+    this.cancelPending();
+    this.setScanning(true);
+  }
+  cancelPending() {
+    this.handleTapOutcomes(this.taps.cancel("cancelled"));
+  }
+  private queueTap(ray: Ray) {
+    const { tap, outcomes } = this.taps.enqueue(ray, performance.now());
+    this.handleTapOutcomes(outcomes);
+    this.feedback.show(tap, this.anchors);
+    this.notifyPending();
+    this.trackingStatus("Your tap is saved. Move slightly sideways if needed.");
+    this.processTaps();
+  }
+  private notifyPending() {
+    const count = this.taps.pending.length;
+    if (count !== this.pendingCount) {
+      this.pendingCount = count;
+      this.onPending(count);
+    }
+  }
+  private processTaps() {
+    const now = performance.now();
+    for (const tap of this.taps.pending) {
+      const ray = this.feedback.ray(tap.id);
+      if (ray) this.taps.updateRay(tap.id, ray);
+    }
+    this.handleTapOutcomes(
+      this.taps.pump(now, this.stable.plane, this.matchedAt, this.items),
+    );
+    this.feedback.animate(now);
+  }
+  private handleTapOutcomes(outcomes: TapOutcome[]) {
+    for (const outcome of outcomes) {
+      if (outcome.type === "resolved") this.copyResolvedTap(outcome);
+      else {
+        this.feedback.finish(outcome.tap.id, performance.now());
+        const messages = {
+          expired:
+            "Could not locate that tap. Try again with the canvas in view.",
+          "canvas-changed":
+            "The canvas changed. Tap again to copy the updated item.",
+          reset: "Tracking space changed. Tap again.",
+          cancelled: "Pending copies cancelled.",
+          empty: "No exported item at that tap.",
+          capacity: "The oldest pending tap was replaced.",
+        };
+        this.onStatus(messages[outcome.reason]);
+      }
+    }
+    this.notifyPending();
   }
   private capture() {
     if (
@@ -257,7 +356,9 @@ export class CompanionScene {
       cameraWorld: Array.from(view.transform.matrix),
     };
     const revision = this.snapshot.revision,
-      snapshot = this.snapshot;
+      snapshot = this.snapshot,
+      trackingEpoch = this.trackingEpoch,
+      capturedAt = performance.now();
     this.processing = true;
     this.captureTime = performance.now();
     const read = this.target.readPixels();
@@ -285,14 +386,13 @@ export class CompanionScene {
         if (
           this.disposed ||
           !this.scanning ||
+          this.trackingEpoch !== trackingEpoch ||
           this.snapshot?.revision !== revision
         )
           return;
         if (!match) {
           if (performance.now() - this.matchedAt > 1000)
-            this.onStatus(
-              "Looking for the canvas. Keep it still and avoid glare.",
-            );
+            this.trackingStatus("Keep the canvas in view and avoid glare.");
           return;
         }
         if (!this.stable.plane) {
@@ -316,12 +416,11 @@ export class CompanionScene {
             ),
           )
         ) {
-          this.matchedAt = performance.now();
-          this.onStatus("Canvas located · tap a visible item to clone it.");
+          this.matchedAt = capturedAt;
+          this.trackingStatus("Canvas located. Tap whenever you want.");
+          this.processTaps();
         } else
-          this.onStatus(
-            "Move the phone slightly sideways to locate the screen.",
-          );
+          this.trackingStatus("Move slightly sideways to locate the screen.");
       })
       .catch(() => {
         if (this.scanning)
@@ -333,30 +432,17 @@ export class CompanionScene {
         this.processing = false;
       });
   }
-  private pickFromScreen(ray: Ray) {
-    const snapshot = this.snapshot,
-      plane = this.stable.plane;
-    if (!snapshot || !plane || performance.now() - this.matchedAt > 900) {
-      this.onStatus(
-        "Hold on—the canvas needs a reliable match before picking.",
-      );
-      return;
-    }
-    const uv = intersectScreen(ray, plane);
-    if (!uv || uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return;
-    const point = {
-      x: snapshot.bounds.x + uv.x * snapshot.bounds.width,
-      y: snapshot.bounds.y + uv.y * snapshot.bounds.height,
-    };
-    const selected = pickItem(snapshot.items, point),
-      item = selected && this.items.get(selected.id);
-    if (!item || item.version !== selected!.version) {
-      this.onStatus(
-        "Tap inside an exported item. Add nested items from the plugin if needed.",
-      );
-      return;
-    }
-    const rect = selected!.bounds;
+  private copyResolvedTap(outcome: Extract<TapOutcome, { type: "resolved" }>) {
+    const snapshot = this.snapshot;
+    if (!snapshot) return;
+    const {
+        item,
+        entry: selected,
+        plane,
+        tap: { ray },
+        uv,
+      } = outcome,
+      rect = selected.bounds;
     const position = screenPosition(
       plane,
       (rect.x + rect.width / 2 - snapshot.bounds.x) / snapshot.bounds.width,
@@ -375,21 +461,31 @@ export class CompanionScene {
     Matrix.FromXYZAxesToRef(right, up, normal, basis);
     const width =
       (vector(plane.axisU).length() * rect.width) / snapshot.bounds.width;
-    this.spawn(item, at, Quaternion.FromRotationMatrix(basis), width);
-    this.onClone(item.id);
-    this.onStatus(`Cloned ${item.name}. Stop scanning to move or scale it.`);
+    const rotation = Quaternion.FromRotationMatrix(basis);
+    this.feedback.finish(outcome.tap.id, performance.now(), {
+      position: vector(screenPosition(plane, uv.x, uv.y)).add(
+        vector(plane.normal).scale(0.008 * facing),
+      ),
+      rotation,
+    });
+    if (this.spawn(item, at, rotation, width)) {
+      this.onClone(item.id);
+      this.onStatus(`Copied ${item.name} · drag to move, pinch to scale.`);
+    }
   }
   place(item: CatalogItem) {
     const camera = this.scene.activeCamera!,
       ray = camera.getForwardRay(0.65),
       position = ray.origin.add(ray.direction.scale(0.65));
-    this.spawn(
-      item,
-      position,
-      camera.absoluteRotation.clone(),
-      Math.min(0.35, (0.25 * item.width) / item.height),
-    );
-    this.onStatus(`Placed ${item.name} · drag to move, pinch to scale.`);
+    if (
+      this.spawn(
+        item,
+        position,
+        camera.absoluteRotation.clone(),
+        Math.min(0.35, (0.25 * item.width) / item.height),
+      )
+    )
+      this.onStatus(`Placed ${item.name} · drag to move, pinch to scale.`);
   }
   private spawn(
     item: CatalogItem,
@@ -399,7 +495,7 @@ export class CompanionScene {
   ) {
     if (this.meshes.length >= 60) {
       this.onStatus("Clear placed items before adding more copies.");
-      return;
+      return false;
     }
     const mesh = MeshBuilder.CreatePlane(
       item.name,
@@ -408,7 +504,7 @@ export class CompanionScene {
     );
     mesh.position.copyFrom(position);
     mesh.rotationQuaternion = rotation;
-    mesh.isPickable = !this.scanning;
+    mesh.isPickable = true;
     // Immutable per-clone texture/material: catalog updates cannot mutate a copy.
     const material = new StandardMaterial(
         `copy-${item.id}-${item.version}`,
@@ -438,6 +534,7 @@ export class CompanionScene {
     setTimeout(() => {
       if (!mesh.isDisposed()) material.emissiveColor = Color3.White();
     }, 180);
+    return true;
   }
   private async anchor(mesh: Mesh) {
     if (!this.inXR || !this.anchors?.attached) return;
@@ -459,6 +556,9 @@ export class CompanionScene {
     }
   }
   clear() {
+    this.taps.cancel();
+    this.feedback.clear();
+    this.notifyPending();
     for (const mesh of this.meshes) {
       this.objectAnchors.get(mesh)?.remove();
       mesh.dispose(false, true);

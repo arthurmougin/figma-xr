@@ -19,13 +19,18 @@ It works on laptop, smartphone, and even in AR with such smartphone.
 
 The experimental [plugin companion](docs/plugin-companion.md) pairs an open Figma
 file with the phone by QR. It keeps an offline catalog for repeated AR placement
-and adds natural-feature screen picking with confidence gating.
+and adds natural-feature screen picking. Taps register immediately; copying can
+finish after matching, with a retained XR ray and pending feedback.
 
 Run `npm ci`, `npm run build:plugin`, then `npm run dev:relay` and `npm run dev`
 in separate terminals. Import `plugin/manifest.json` into Figma desktop and open
 `/figma-xr/companion` on the phone through a reachable, trusted HTTPS address.
 This route needs no Figma API credentials. Physical screen tracking still needs
 device validation; catalog placement works independently of tracking.
+
+For phone testing without installing a development certificate, build the app
+and run `npm run dev:phone` with Cloudflared installed. Paste its two temporary
+HTTPS addresses into the plugin and pair again.
 
 ## Installation and OAuth configuration
 

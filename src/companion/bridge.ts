@@ -9,6 +9,7 @@ interface Pairing {
 export class CompanionBridge {
   items = shallowRef<CatalogItem[]>([]);
   snapshot = shallowRef<ViewportSnapshot | null>(null);
+  viewportEpoch = ref(0);
   status = ref("Loading saved catalog…");
   desktop = ref(false);
   storageError = ref("");
@@ -111,6 +112,7 @@ export class CompanionBridge {
         this.ping = setInterval(() => this.send({ type: "ping" }), 20_000);
       }
       if (packet.type === "presence") {
+        if (this.desktop.value !== packet.desktop) this.viewportEpoch.value++;
         this.desktop.value = packet.desktop;
         this.status.value = packet.desktop
           ? "Plugin connected · catalog updates live"
@@ -138,6 +140,7 @@ export class CompanionBridge {
       }
       if (packet.type === "invalidate" && packet.revision > this.revision) {
         this.revision = packet.revision;
+        this.viewportEpoch.value++;
         this.snapshot.value = null;
       }
       if (
@@ -154,6 +157,7 @@ export class CompanionBridge {
       if (this.ping) clearInterval(this.ping);
       this.ping = null;
       this.desktop.value = false;
+      this.viewportEpoch.value++;
       this.snapshot.value = null;
       this.status.value =
         event.code === 1008

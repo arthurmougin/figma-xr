@@ -20,6 +20,19 @@ npm run dev
 
 The companion is at `/figma-xr/companion`. A link on the landing page also opens the most recently saved catalog.
 
+## Test on a phone with temporary HTTPS
+
+If `cloudflared` is installed, there is a certificate-free testing path:
+
+```sh
+npm run build
+npm run dev:phone
+```
+
+The command prints a **Companion website** URL ending in `/figma-xr/` and a **Pairing server** URL. Paste both into the plugin, then click **Pair phone** again. The phone can use that new QR from any network. Leave the terminal running; stopping it closes the temporary address. Each start produces a different hostname.
+
+This preview serves the built app and its own in-memory pairing service through a temporary Cloudflare HTTPS tunnel. It does not load OAuth credentials, expose the Vite development server or serve the repository. The URL is an externally reachable testing endpoint; pairing tokens still control access to each room's exported assets. The existing `dev:relay` service is not needed for this mode. Source changes require another build. Use the LAN/trusted-certificate route below if you prefer local network testing.
+
 ## Load the plugin
 
 1. In Figma desktop, open a design file. Use **Plugins → Development → Import plugin from manifest** and select `plugin/manifest.json` from this checkout. The preceding build creates the ignored `plugin/dist` files it references.
@@ -35,7 +48,12 @@ The development manifest permits configurable network destinations. Before a Com
 
 Visible top-level frames, components, instances and groups become catalog entries. **Add selected items** adds nested elements, including offscreen selections. The catalog accumulates as you pan and is bounded to 256 items per pairing session. Search it on the phone and place any item repeatedly without returning to the desktop. The library works without a current screen match or a connected plugin.
 
-Enter AR, then tap **Scan desktop**. Aim at the Figma canvas and translate the phone slightly sideways. Once the canvas is located, tap inside an eligible visible item to clone it at the screen. Stop scanning to manipulate placed objects. Tap catalog entries for free placement, drag copies to move them and pinch to scale. Copies have their own textures and do not change when the Figma source is edited. Clearing placed items leaves the catalog intact. Placed objects are session-local; the catalog is the persisted part.
+Enter AR and tap the desktop whenever you want. Matching starts automatically; there is no ready-state gate on input. A pulsing reticle and subtle ray acknowledge the tap immediately while the phone locates the screen. Move slightly sideways if acquisition needs more depth information. Once a match is reliable, the saved tap resolves to an item and the copy flashes into place. Multiple taps can be pending independently.
+
+Tap catalog entries for free placement, drag copies to move them and pinch to scale. Gestures starting on a placed object manipulate that object instead of queuing another copy. Copies have their own textures and do not change when the Figma source is edited. Clearing placed items leaves the catalog intact. Placed objects are session-local; the catalog is the persisted part.
+
+Pending taps can be cancelled from the phone. They expire after eight seconds rather than copying unexpectedly much later. Edits, pan/zoom, a replaced reference, disconnection, XR reference-space resets and manual recalibration cancel pending requests; a tap made while the next reference is loading can bind to that publication if no further canvas invalidation occurs. The prototype retains up to twelve pending requests, replacing the oldest with visible feedback when full.
+
 
 ## What the homography does
 
@@ -48,15 +66,15 @@ referencePixel ~ inverse(H) × cameraPixel
 
 The homogeneous division accounts for perspective: a rectangular viewport can appear as a trapezoid. Reference pixels map linearly to document coordinates through the exported viewport bounds. Selection uses containing paint bounds and paint order; a tap on empty space does not choose a nearby frame.
 
-A homography alone does **not** establish physical monitor size or metric depth. This prototype associates the same reference features across synchronized WebXR camera frames, triangulates them using translated XR camera poses, and fits a metric screen plane. Rotation alone cannot provide that depth. It requires at least a 2.5 cm baseline, enough well-spread consistent features, a plausible aspect ratio and a low fitting residual. Two consistent plane estimates are needed before accepting a pose. A screen tap then intersects the XR input ray with that plane and resolves the item in document coordinates.
+A homography alone does **not** establish physical monitor size or metric depth. This prototype associates the same reference features across synchronized WebXR camera frames, triangulates them using translated XR camera poses, and fits a metric screen plane. Rotation alone cannot provide that depth. It requires at least a 2.5 cm baseline, enough well-spread consistent features, a plausible aspect ratio and a low fitting residual. Two consistent plane estimates are needed before accepting a pose. The input ray is captured at the start of the tap and retained in XR reference coordinates. When available, an XR anchor at that ray's origin and orientation follows spatial corrections; it does not assume a known surface depth. Once the plane is recovered, its intersection with the retained ray resolves the original tap in document coordinates, even if the camera has since moved. The pending reticle is provisional feedback along that ray, not an estimated surface hit. It moves to the actual screen intersection when resolved. This assumes the physical monitor stays still during acquisition.
 
-Screen location is held fixed after acquisition and verified by reprojection against fresh matches. Three inconsistent checks discard it. A pick requires a fresh accepted match (under 900 ms old). Placed clones never follow successive homography estimates. WebXR anchors are used when available; otherwise copies retain their world transforms. Moving the monitor requires reacquisition.
+Screen location is held fixed after acquisition and verified by reprojection against fresh matches. Three inconsistent checks discard it. Completing a pending copy requires an accepted camera observation under 900 ms old; registering a tap does not. Match freshness uses the camera capture time rather than the time the worker returns. Placed clones never follow successive homography estimates. WebXR anchors are used when available; otherwise copies retain their world transforms. Moving the monitor requires reacquisition.
 
 ## Edits and feature-map revisions
 
 The plugin listens to the current page's `nodechange` event. Changes dirty affected catalog exports, including exported ancestors of edited children. Movement of an exported node updates placement without re-exporting that node's own pixels; movement inside an exported ancestor dirties the ancestor. Deleted nodes are removed from the catalog; already placed copies remain snapshots. Offscreen cached items are re-exported when dirty.
 
-Visible changes and viewport pan/zoom immediately invalidate picking. After a short debounce, the plugin publishes updated catalog assets and a new bounded viewport PNG with matching document bounds, item versions and a monotonic revision. Exports that race with edits are retried. The phone ignores stale matching results, rebuilds descriptors for the new viewport image and reacquires the screen pose. This first implementation rebuilds the visible viewport's descriptors rather than maintaining a per-tile incremental feature index; it does not re-index the whole document.
+Visible changes and viewport pan/zoom immediately cancel pending requests against the previous canvas. An explicit invalidation epoch is observed even while no reference image is loaded. After a short debounce, the plugin publishes updated catalog assets and a new bounded viewport PNG with matching document bounds, item versions and a monotonic revision. Exports that race with edits are retried. The phone ignores stale matching results, rebuilds descriptors for the new viewport image and reacquires the screen pose. This first implementation rebuilds the visible viewport's descriptors rather than maintaining a per-tile incremental feature index; it does not re-index the whole document.
 
 The viewport PNG is exported through a temporary SliceNode, removed in `finally`. This preserves overlaps and clipping in the visible composition. There are no permanent helper markers, but these transient document operations may affect undo history and should be validated with collaboration and large files before release.
 
@@ -64,7 +82,7 @@ The viewport PNG is exported through a temporary SliceNode, removed in `finally`
 
 Printed targets are not a requirement for planar feature matching. Displays introduce additional acquisition problems: moire from the camera/display pixel grids, flicker banding, glare, blur, and repeated or low-detail UI. These may reduce matches or produce unstable estimates. The worker uses a slightly blurred grayscale image, descriptor ratio tests, RANSAC, spread and reprojection thresholds. Matching runs in a worker on bounded images; raw camera frames never go through the relay.
 
-Those measures do not guarantee a match on every screen. The UI declines picking when confidence is insufficient. Catalog placement and already placed clones remain usable. Actual phone/monitor acquisition rate, latency, alignment error, camera-texture orientation and long-session anchor behavior still require physical-device validation. No claim of production-quality screen tracking is made from synthetic tests.
+Those measures do not guarantee a match on every screen. The UI records taps immediately and defers copying when confidence is insufficient, with feedback, cancellation and an expiry. Catalog placement and already placed clones remain usable. Actual phone/monitor acquisition rate, latency, alignment error, camera-texture orientation and long-session anchor behavior still require physical-device validation. No claim of production-quality screen tracking is made from synthetic tests.
 
 Current picking uses axis-aligned exported bounds. Rotated top-level nodes are available in the catalog but excluded from screen picking. Overlapping transparent shapes are selected by their bounds, not by a pixel-alpha hit test. Prototyping supports exported flat panels, not reconstruction of 3D geometry from arbitrary Figma artwork.
 
@@ -85,7 +103,7 @@ npm run test:browser
 # $env:PLAYWRIGHT_CHANNEL='chrome'; npm.cmd run test:browser
 ```
 
-Unit/integration tests exercise actual OpenCV perspective matching, reference invalidation, metric geometry, degenerate motion rejection, pose gating, relay authorization, asset revisions, deletion and reconnection. Browser tests cover anonymous pairing, placement, edited catalog assets, offline persistence and OpenCV worker initialization. An actual Figma session and physical WebXR session remain necessary acceptance tests.
+Unit/integration tests exercise actual OpenCV perspective matching, reference invalidation, metric geometry, degenerate motion rejection, pose gating, relay authorization, asset revisions, deletion and reconnection. Pending-input tests cover delayed matching after camera motion, multiple taps, reference loading and invalidation, exact asset versions, expiry, cancellation, anchor corrections and late-anchor cleanup. Browser tests cover anonymous pairing, placement, edited catalog assets, offline persistence and OpenCV worker initialization. An actual Figma session and physical WebXR session remain necessary acceptance tests.
 
 ## References
 

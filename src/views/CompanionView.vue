@@ -7,7 +7,7 @@ const { items, status, desktop, storageError } = bridge;
 const canvas = ref<HTMLCanvasElement | null>(null),
   overlay = ref<HTMLElement | null>(null);
 const inXR = ref(false),
-  scanning = ref(false),
+  pending = ref(0),
   message = ref("Your Figma catalog, ready to place in space."),
   query = ref("");
 let scene: CompanionScene | null = null;
@@ -17,7 +17,9 @@ const filtered = computed(() =>
   ),
 );
 watch(items, (value) => scene?.updateCatalog(value));
-watch(bridge.snapshot, (value) => scene?.updateSnapshot(value));
+watch([bridge.snapshot, bridge.viewportEpoch], ([value, epoch]) =>
+  scene?.updateSnapshot(value, epoch),
+);
 async function enterAR() {
   if (!scene || !overlay.value) return;
   try {
@@ -27,23 +29,20 @@ async function enterAR() {
       error instanceof Error ? error.message : "Could not enter AR.";
   }
 }
-function scan() {
-  scanning.value = !scanning.value;
-  scene?.setScanning(scanning.value);
-}
 onMounted(async () => {
   if (canvas.value) {
     scene = new CompanionScene(canvas.value);
     scene.onStatus = (value) => (message.value = value);
     scene.onXR = (active) => {
       inXR.value = active;
-      if (!active) scanning.value = false;
+      if (!active) pending.value = 0;
     };
     scene.onClone = (id) => bridge.send({ type: "highlight", id });
+    scene.onPending = (count) => (pending.value = count);
   }
   await bridge.start();
   scene?.updateCatalog(items.value);
-  scene?.updateSnapshot(bridge.snapshot.value);
+  scene?.updateSnapshot(bridge.snapshot.value, bridge.viewportEpoch.value);
 });
 onBeforeUnmount(() => {
   bridge.dispose();
@@ -67,18 +66,21 @@ onBeforeUnmount(() => {
       </header>
       <div class="controls panel" @beforexrselect.prevent>
         <p role="status">{{ message }}</p>
+        <p v-if="pending" class="pending" aria-live="polite">
+          <span class="pending-pulse" aria-hidden="true"></span>{{ pending }}
+          {{ pending === 1 ? "tap saved" : "taps saved" }} · copying when
+          located
+        </p>
         <p v-if="storageError" role="alert">{{ storageError }}</p>
         <div class="actions">
           <button v-if="!inXR" class="primary" @click="enterAR">
             Enter AR
           </button>
-          <button
-            v-else
-            :class="{ primary: scanning }"
-            :aria-pressed="scanning"
-            @click="scan"
-          >
-            {{ scanning ? "Stop scanning" : "Scan desktop" }}
+          <button v-else @click="scene?.recalibrate()">
+            Recalibrate screen
+          </button>
+          <button v-if="pending" @click="scene?.cancelPending()">
+            Cancel {{ pending }} pending {{ pending === 1 ? "copy" : "copies" }}
           </button>
           <button @click="scene?.clear()">Clear placed items</button>
           <button v-if="desktop" @click="bridge.send({ type: 'request-sync' })">
@@ -249,5 +251,32 @@ button {
 .empty {
   padding: 8px 0;
   line-height: 1.5;
+}
+</style>
+
+<style scoped>
+.pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #c3b6ff !important;
+}
+.pending-pulse {
+  width: 8px;
+  height: 8px;
+  background: #b8a5ff;
+  border-radius: 50%;
+  animation: pending-pulse 1s ease-in-out infinite;
+}
+@keyframes pending-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(1.35);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pending-pulse {
+    animation: none;
+  }
 }
 </style>
