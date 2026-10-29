@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { createAuthHandler, loadConfig } from "./figma-auth.mjs";
 import { attachPairing } from "./pairing.mjs";
+import { companionConnection } from "../scripts/companion-connection.mjs";
 const origins = (
   process.env.FIGMA_ALLOWED_ORIGINS ||
   "https://localhost:5173,https://arthurmougin.github.io"
@@ -25,7 +26,11 @@ const server = createServer((req, res) => {
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "not_configured" }));
 });
-const pairing = attachPairing(server, { origins });
+const pairingOrigins = [...origins],
+  localConnection = companionConnection();
+if (localConnection.website)
+  pairingOrigins.push(new URL(localConnection.website).origin);
+const pairing = attachPairing(server, { origins: pairingOrigins });
 const host = process.env.AUTH_HOST || "127.0.0.1",
   port = Number(process.env.PORT || 8787);
 server.listen(port, host, () =>

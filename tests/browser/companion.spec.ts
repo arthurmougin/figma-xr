@@ -196,13 +196,32 @@ test("OpenCV worker initializes and extracts natural features in the browser", a
   expect(count).toBeGreaterThan(100);
 });
 
-test("plugin QR panel pairs from an opaque iframe and forwards Figma image exports", async ({
+test("plugin auto-prepares a QR without URL entry and waits for a phone before exporting", async ({
   page,
   context,
 }) => {
   const html = readFileSync("plugin/dist/ui.html", "utf8");
   await page.goto("companion");
   await page.evaluate((html) => {
+    (window as any).pluginMessages = [];
+    window.addEventListener("message", (event) => {
+      const message = event.data?.pluginMessage;
+      if (!message) return;
+      (window as any).pluginMessages.push(message.type);
+      if (message.type === "load-settings")
+        (event.source as Window).postMessage(
+          {
+            pluginMessage: {
+              type: "settings",
+              settings: {
+                website: "https://localhost:5173/figma-xr/",
+                relay: "https://localhost:5173",
+              },
+            },
+          },
+          "*",
+        );
+    });
     const iframe = document.createElement("iframe");
     iframe.id = "plugin";
     iframe.setAttribute("sandbox", "allow-scripts");
@@ -210,10 +229,16 @@ test("plugin QR panel pairs from an opaque iframe and forwards Figma image expor
     document.body.replaceChildren(iframe);
   }, html);
   const frame = page.frameLocator("#plugin");
-  await frame.getByRole("button", { name: "Pair phone", exact: true }).click();
+
   await expect(
     frame.getByRole("link", { name: "Open companion", exact: true }),
   ).toBeVisible();
+  await expect(frame.locator("#website")).not.toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      (window as any).pluginMessages.includes("connected"),
+    ),
+  ).toBe(false);
   const href = await frame
     .getByRole("link", { name: "Open companion", exact: true })
     .getAttribute("href");
@@ -222,6 +247,11 @@ test("plugin QR panel pairs from an opaque iframe and forwards Figma image expor
   await expect(
     frame.getByText("Phone connected", { exact: true }),
   ).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).pluginMessages.includes("connected")),
+    )
+    .toBe(true);
   await page.evaluate(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 120;

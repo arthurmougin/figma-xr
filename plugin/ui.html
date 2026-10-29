@@ -1,9 +1,149 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-*{box-sizing:border-box}body{margin:0;padding:18px;font:13px system-ui;background:var(--figma-color-bg,#f6f6f8);color:var(--figma-color-text,#20202a)}h1{font-size:20px;margin:0 0 8px}p{line-height:1.5}label{display:block;margin:12px 0 4px;font-weight:600}input{width:100%;padding:9px;border:1px solid #aaa;border-radius:6px;background:transparent;color:inherit}button{padding:10px 12px;margin-top:12px;border:0;border-radius:7px;background:#6045de;color:white;cursor:pointer}button.secondary{background:#e4e0f4;color:#30234d}#qr{display:block;margin:12px auto;width:180px;height:180px;background:white}#status{font-size:12px;min-height:36px}a{color:inherit}small{color:var(--figma-color-text-secondary,#666)}</style></head><body>
-<h1>Figma XR</h1><p>Pair your phone once. Your design catalog stays with you in AR.</p>
-<label for="website">Companion website</label><input id="website" type="url" value="https://localhost:5173/figma-xr/" spellcheck="false"><small>Use your computer’s trusted HTTPS address or a deployed site.</small>
-<label for="relay">Pairing server</label><input id="relay" type="url" placeholder="Same origin as the companion website" spellcheck="false">
-<button id="pair">Pair phone</button><span id="connection" style="margin-left:10px"></span>
-<canvas id="qr" width="240" height="240"></canvas><a id="link" target="_blank" rel="noreferrer"></a>
-<div><button class="secondary" id="selection">Add selected items</button> <button class="secondary" id="sync">Refresh catalog</button></div><p id="status" role="status">No Figma sign-in required. Open a design and pair your phone.</p>
-<script>/* BUNDLE */</script></body></html>
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        padding: 18px;
+        font: 13px system-ui;
+        background: var(--figma-color-bg, #f6f6f8);
+        color: var(--figma-color-text, #20202a);
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 8px;
+      }
+      p {
+        line-height: 1.5;
+      }
+      label {
+        display: block;
+        margin: 12px 0 4px;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        padding: 9px;
+        border: 1px solid #aaa;
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+      }
+      button {
+        padding: 9px 12px;
+        margin-top: 10px;
+        border: 0;
+        border-radius: 7px;
+        background: #6045de;
+        color: white;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #e4e0f4;
+        color: #30234d;
+      }
+      #qr {
+        display: block;
+        margin: 14px auto 8px;
+        width: 220px;
+        height: 220px;
+        background: white;
+      }
+      #link {
+        display: block;
+        text-align: center;
+      }
+      #status {
+        font-size: 12px;
+        min-height: 38px;
+      }
+      #connection {
+        font-size: 12px;
+        color: var(--figma-color-text-secondary, #666);
+      }
+      a {
+        color: inherit;
+      }
+      small {
+        display: block;
+        margin-top: 5px;
+        color: var(--figma-color-text-secondary, #666);
+      }
+      details {
+        margin-top: 18px;
+        border-top: 1px solid #aaa5;
+        padding-top: 12px;
+      }
+      summary {
+        cursor: pointer;
+        font-size: 12px;
+      }
+      #pair {
+        display: block;
+        margin: 10px auto;
+      }
+      h1 + p {
+        margin-bottom: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Figma XR</h1>
+    <p>Scan to bring your designs into AR.</p>
+    <div id="connection">Preparing connection</div>
+    <canvas
+      id="qr"
+      width="240"
+      height="240"
+      role="img"
+      aria-label="Scan to connect your phone"
+      hidden
+    ></canvas
+    ><a id="link" target="_blank" rel="noreferrer" hidden>Open companion</a>
+    <p id="status" role="status" aria-live="polite">
+      Preparing your phone connection…
+    </p>
+    <button id="pair" class="secondary">Retry connection</button>
+    <div>
+      <button class="secondary" id="selection">Add selected items</button>
+      <button class="secondary" id="sync">Refresh catalog</button>
+    </div>
+    <details id="advanced">
+      <summary>Connection settings</summary>
+      <label for="website">Companion website</label
+      ><input id="website" type="url" spellcheck="false" /><small
+        >HTTPS address the phone can reach. Local testing uses the same
+        Wi-Fi.</small
+      >
+      <label for="relay">Phone pairing server</label
+      ><input
+        id="relay"
+        type="url"
+        placeholder="Same origin as the companion website"
+        spellcheck="false"
+      />
+      <label for="desktop-relay">Desktop pairing server</label
+      ><input
+        id="desktop-relay"
+        type="url"
+        placeholder="Same as the phone pairing server"
+        spellcheck="false"
+      /><small
+        >Local builds connect through this computer. Both addresses must reach
+        the same relay.</small
+      >
+      <button id="apply">Apply and reconnect</button>
+    </details>
+    <script>
+      /* BUNDLE */
+    </script>
+  </body>
+</html>

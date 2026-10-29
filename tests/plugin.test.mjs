@@ -86,6 +86,9 @@ test("plugin publishes edits and geometry coherently, refreshes offscreen assets
   });
   await Promise.resolve();
   await Promise.resolve();
+  await figma.ui.onmessage({ type: "load-settings" });
+  assert.equal(messages.at(-1).type, "settings");
+  assert.equal(first.exports, 0);
   await figma.ui.onmessage({ type: "connected" });
   assert.equal(first.exports, 1);
   assert.equal(second.exports, 1);

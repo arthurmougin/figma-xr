@@ -151,3 +151,15 @@ test("catalog replays after reconnect, edits replace assets, invalidation reject
   await again.next("catalog-remove");
   assert.equal(f.pairing.rooms.get(pair.room).catalog.size, 0);
 });
+
+test("unused automatic QR rooms are reclaimed when the plugin closes", async (t) => {
+  const f = await fixture(t),
+    pair = await (await f.create()).json(),
+    desktop = await f.join(pair.room, "desktop", pair.desktopToken);
+  await desktop.next("joined");
+  desktop.socket.close();
+  await once(desktop.socket, "close");
+  for (let i = 0; i < 20 && f.pairing.rooms.has(pair.room); i++)
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(f.pairing.rooms.has(pair.room), false);
+});

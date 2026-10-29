@@ -209,7 +209,7 @@ export function attachPairing(
             ws.close(1008, "This session already has a device");
             return;
           }
-          client = { socket: ws, role: data.role };
+          client = { socket: ws, role: data.role, roomId: data.room };
           room.clients.add(client);
           room.touched = Date.now();
           clearTimeout(authTimer);
@@ -282,6 +282,8 @@ export function attachPairing(
         clearTimeout(authTimer);
         if (room && client) {
           room.clients.delete(client);
+          if (!room.clients.size && !room.catalog.size && !room.snapshot)
+            rooms.delete(client.roomId);
           broadcast(room, {
             type: "presence",
             desktop: [...room.clients].some((c) => c.role === "desktop"),

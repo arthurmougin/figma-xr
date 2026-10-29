@@ -155,21 +155,42 @@ async function start() {
     tunnel.kill();
     void preview.close();
   };
-  let outputBuffer="";
+  let outputBuffer = "";
   const inspect = (chunk) => {
     const text = chunk.toString();
-    outputBuffer=(outputBuffer+text).slice(-8192);
-    const url = outputBuffer.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i)?.[0];
+    outputBuffer = (outputBuffer + text).slice(-8192);
+    const url = outputBuffer.match(
+      /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i,
+    )?.[0];
     if (url && !announced) {
       announced = true;
       origins.push(new URL(url).origin);
       console.log(
-        `\nCompanion website: ${url}${base}\nPairing server:    ${url}\n\nPaste these addresses into the Figma plugin, then Pair phone.\nKeep this terminal running. Ctrl+C closes the temporary test address.\n`,
+        `\nTemporary companion: ${url}${base}\nPreparing the plugin QR configuration…`,
       );
+      void import("../scripts/build-plugin.mjs")
+        .then(({ buildPlugin }) =>
+          buildPlugin({
+            connection: {
+              website: url + base,
+              relay: url,
+              desktopRelay: `http://127.0.0.1:${port}`,
+              kind: "tunnel",
+            },
+          }),
+        )
+        .then(() => {
+          console.log(
+            "Reopen Figma XR Companion in Figma: its QR is ready without URL entry. Keep this terminal running. Ctrl+C closes the temporary address.",
+          );
+        })
+        .catch((error) =>
+          console.error("Could not rebuild the plugin:", error.message),
+        );
     }
     if (/Registered tunnel connection/.test(text))
       console.log("Phone tunnel connected.");
-    if (/ERR|error/i.test(text) && !url) process.stderr.write(text);
+    if (/ERR|error/i.test(text)) process.stderr.write(text);
   };
   tunnel.stdout.on("data", inspect);
   tunnel.stderr.on("data", inspect);

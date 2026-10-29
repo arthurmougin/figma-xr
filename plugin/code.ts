@@ -281,6 +281,16 @@ async function publish(selectionOnly = false) {
   }
 }
 figma.ui.onmessage = async (message) => {
+  if (message?.type === "load-settings") {
+    let settings;
+    try {
+      settings = await figma.clientStorage.getAsync(
+        "figma-xr-companion-settings",
+      );
+    } catch {}
+    notify({ type: "settings", settings });
+  }
+  if (message?.type === "disconnected") connected = false;
   if (message?.type === "connected") {
     connected = true;
     notify({
@@ -311,6 +321,3 @@ figma.ui.onmessage = async (message) => {
       message.settings,
     );
 };
-figma.clientStorage
-  .getAsync("figma-xr-companion-settings")
-  .then((settings) => notify({ type: "settings", settings }));

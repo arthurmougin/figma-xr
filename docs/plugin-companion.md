@@ -29,7 +29,7 @@ npm run build
 npm run dev:phone
 ```
 
-The command prints a **Companion website** URL ending in `/figma-xr/` and a **Pairing server** URL. Paste both into the plugin, then click **Pair phone** again. The phone can use that new QR from any network. Leave the terminal running; stopping it closes the temporary address. Each start produces a different hostname.
+The command creates a temporary HTTPS address and rebuilds the development plugin with it. Close and reopen **Figma XR Companion** in Figma: it prepares the QR automatically. Scan it on the phone; no URL entry is needed. Leave the terminal running; stopping it closes the temporary address. Each start produces a different hostname, so reopen the plugin after starting a new preview.
 
 This preview serves the built app and its own in-memory pairing service through a temporary Cloudflare HTTPS tunnel. It does not load OAuth credentials, expose the Vite development server or serve the repository. The URL is an externally reachable testing endpoint; pairing tokens still control access to each room's exported assets. The existing `dev:relay` service is not needed for this mode. Source changes require another build. Use the LAN/trusted-certificate route below if you prefer local network testing.
 
@@ -37,10 +37,14 @@ This preview serves the built app and its own in-memory pairing service through 
 
 1. In Figma desktop, open a design file. Use **Plugins → Development → Import plugin from manifest** and select `plugin/manifest.json` from this checkout. The preceding build creates the ignored `plugin/dist` files it references.
 2. Run **Figma XR Companion** from Development plugins. No Community publication is needed for development. Figma assigns a plugin ID when you create/publish a plugin; this is separate from an OAuth client ID.
-3. Enter the companion website's **HTTPS** address, including `/figma-xr/`. It must be reachable from the phone. `https://localhost:5173/figma-xr/` is useful for desktop testing but refers to the phone itself when scanned there. Use a LAN hostname/IP with a trusted certificate, or your HTTPS tunnel/deployment.
-4. Enter the relay's HTTPS origin if it differs from the website. Otherwise leave it blank. Its proxy must forward `/api/pair/rooms` and WebSocket upgrades at `/api/pair/socket`.
-5. For an additional companion origin, add its exact origin to `FIGMA_ALLOWED_ORIGINS` in `.env.auth`, then restart the relay. Figma's sandbox UI uses the opaque `null` origin, which pairing explicitly accepts. OAuth retains its separate, stricter origin checks.
-6. Click **Pair phone** and scan the QR. The plugin must stay running for live edits and screen picking. The phone retains catalog images after disconnecting and reloads them from IndexedDB.
+3. The plugin prepares a QR automatically. A local build chooses the current private Wi-Fi address and connects the desktop through `http://127.0.0.1:8787`; the phone uses the HTTPS site/proxy on port 5173. These reach the same relay. URL fields are hidden under **Connection settings**.
+4. Scan the QR on the phone. For LAN testing both devices must be on the same network, the HTTPS certificate must be acceptable to the phone, and Windows must allow private LAN access on port 5173. Run `scripts/allow-phone-lan.ps1` as administrator to add a narrow rule for Node, port 5173, private Wi-Fi and the local subnet. The script defaults to the `WiFi` interface; use `-InterfaceAlias` for another interface. Remove it later with `Remove-NetFirewallRule -Name FigmaXR-Phone-Private-5173` if no longer needed.
+5. The development relay automatically allows the detected LAN companion origin for pairing. OAuth keeps its separate, configured origin checks. On a hosted relay, configure `FIGMA_ALLOWED_ORIGINS` with the companion's exact origin.
+6. Exporting begins only when a phone joins. The plugin must stay running for live edits and screen picking. The phone retains catalog images after disconnecting and reloads them from IndexedDB.
+
+`npm run dev` rebuilds the plugin before starting Vite. After a changed address or build, close and reopen the Figma development plugin to load the new bundle. Existing saved localhost settings migrate to the new build address automatically. Manual overrides are available in **Connection settings → Apply and reconnect** and remain active while the build's endpoints are unchanged.
+
+For a published plugin, set `FIGMA_XR_COMPANION_URL` and `FIGMA_XR_RELAY_URL` in `.env.local` or the build environment to stable HTTPS addresses. An optional `FIGMA_XR_DESKTOP_RELAY_URL` can use a different desktop transport to the same relay. Otherwise it defaults to the public relay. Only these public endpoint fields are bundled. CI and production builds do not infer a private address from the build machine; configure their endpoints explicitly. A Figma plugin cannot inspect the operating system's network interfaces itself, so local address detection happens in the Node build/helper. A VPN or multiple physical networks can still require an explicit override.
 
 The development manifest permits configurable network destinations. Before a Community release, restrict `networkAccess.allowedDomains` to the production relay and move localhost destinations to `devAllowedDomains`.
 
