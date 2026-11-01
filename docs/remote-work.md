@@ -75,6 +75,23 @@ The **Figma connection in ChatGPT** is separate from the app's OAuth/relay. It w
 
 ## Evidence and remaining checks
 
+Preparation verified on **2026-11-01**, application code revision `ca767b2`:
+
+| Check | Result |
+| --- | --- |
+| Unit/integration suite | 38 passed |
+| Existing live-plugin/browser suite | 7 passed on the local HTTPS relay/dev server |
+| Built app in phone portrait and landscape layouts | 8 passed, including the production vision worker |
+| Production frontend and development-plugin builds | Passed on Linux and Windows during preparation; final code built on Windows |
+| Relay container | Built; health, origin rejection, room creation and socket join passed; temporary test container removed |
+| Visual review | Portrait and landscape preview screenshots checked; non-immersive placement fits the uncovered canvas |
+| GitHub read access | Verified |
+| GitHub source push / branch-write probe | Blocked by automatic approval review before publication; cloud writes remain unverified |
+| GitHub Actions / Pages deployment of this branch | Prepared, not executed while source publication is blocked |
+| Permanent hosted relay / physical WebXR | Not verified |
+
+The development vision dependency is now prepared before first use, avoiding the observed Vite reload when OpenCV was first requested. The production worker is checked independently from Vite in the mobile suite. Local frontend and relay services can be stopped after publication; they are not part of the remote lab design.
+
 Local automated checks cover anonymous pairing, export revisions, worker initialization, tap queuing, the mobile lab without backend calls, import/export and preservation across reload/sample visits. A Pages deployment and a physical phone test must be checked separately after publication. No successful physical screen tracking or hosted OAuth test has been claimed.
 
 Next UI work: one-handed catalog/menu behavior in portrait and landscape; onboarding before camera permission; useful unsupported-AR feedback; entering/exiting XR; placing repeated items; recoverable errors. The lab is an iteration surface, not proof that the live screen tracker is ready.
