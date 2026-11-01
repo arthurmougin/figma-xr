@@ -31,7 +31,7 @@ test("catalog connects before the 3D engine finishes loading", async ({ page, re
     await expect(page.getByRole("button", { name: "Enter AR", exact: true })).toBeDisabled();
     expect(requests.some((path) => /XRView\.vue|Projects\.vue|babylon\/scene|@babylonjs_inspector/.test(path))).toBe(false);
     release();
-    await expect(page.getByRole("button", { name: "Enter AR", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Clear placed items", exact: true })).toBeEnabled();
   } finally {
     release();
     desktop.terminate();

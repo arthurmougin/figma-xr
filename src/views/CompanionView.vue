@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import { CompanionBridge } from "../companion/bridge";
 import type { CompanionScene } from "../companion/scene";
+import { demoCatalog } from "../companion/demo";
+import { catalogFile, parseCatalogFile, CATALOG_FILE_MAX_BYTES } from "../companion/catalog-file.mjs";
+const demo = useRoute().query.demo === "1";
+const build = __APP_BUILD__;
+const showCatalog = ref(true), showGuide = ref(true), arAvailable = ref<boolean | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const guideKey = `figma-xr-guide-v1-${demo ? "demo" : "live"}`;
 const bridge = new CompanionBridge();
 const { items, status, desktop, storageError } = bridge;
 const canvas = ref<HTMLCanvasElement | null>(null),
@@ -20,6 +28,36 @@ const filtered = computed(() =>
     item.name.toLowerCase().includes(query.value.toLowerCase()),
   ),
 );
+const diagnosticUrl = computed(() => import.meta.env.BASE_URL + "phone-check.html?" +
+  new URLSearchParams(demo ? { mode: "demo" } : bridge.relay.value ? { relay: bridge.relay.value } : {}));
+function dismissGuide() {
+  showGuide.value = false;
+  try { localStorage.setItem(guideKey, "done"); } catch { /* Help remains dismissible in memory. */ }
+}
+function exportCatalog() {
+  try {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(catalogFile(items.value))], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "figma-xr-catalog.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    message.value = "Catalog backup downloaded. It contains design images; keep it private.";
+  } catch (error) { message.value = error instanceof Error ? error.message : "Could not export the catalog."; }
+}
+async function importCatalog(event: Event) {
+  const input = event.target as HTMLInputElement, file = input.files?.[0];
+  if (!file) return;
+  try {
+    if (file.size > CATALOG_FILE_MAX_BYTES) throw new Error("Catalog backups must be under 60 MB.");
+    const imported = parseCatalogFile(await file.text());
+    if (disposed) return;
+    await bridge.importCatalog(imported);
+    showCatalog.value = true;
+    message.value = `Imported ${imported.length} items. Your catalog is ready without a desktop.`;
+  } catch (error) { message.value = error instanceof Error ? error.message : "Could not import this catalog."; }
+  finally { input.value = ""; }
+}
 watch(items, (value) => scene?.updateCatalog(value));
 watch([bridge.snapshot, bridge.viewportEpoch], ([value, epoch]) =>
   scene?.updateSnapshot(value, epoch),
@@ -63,7 +101,15 @@ async function prepareScene() {
 }
 onMounted(() => {
   // Pairing and the catalog must not wait for the XR engine download or WebGL.
-  void bridge.start();
+  try { showGuide.value = localStorage.getItem(guideKey) !== "done"; } catch { /* Storage is optional. */ }
+  if (demo) {
+    items.value = demoCatalog();
+    status.value = "Demo catalog · no desktop required";
+  } else void bridge.start();
+  if (!navigator.xr) arAvailable.value = false;
+  else void navigator.xr.isSessionSupported("immersive-ar")
+    .then((available) => { if (!disposed) arAvailable.value = available; })
+    .catch(() => { if (!disposed) arAvailable.value = false; });
   void prepareScene();
 });
 onBeforeUnmount(() => {
@@ -82,12 +128,30 @@ onBeforeUnmount(() => {
           ><span class="connection" :class="{ live: desktop }">{{
             status
           }}</span>
+          <span v-if="demo" class="mode-label">Mobile lab · sample designs</span>
         </div>
-        <router-link :to="{ name: 'landingpage' }" aria-label="Back to home"
-          >Home</router-link
-        >
+        <details class="menu">
+          <summary>Menu</summary>
+          <nav aria-label="Companion menu">
+            <button @click="showGuide = true">Show onboarding</button>
+            <router-link v-if="!demo" to="/lab">Try sample designs</router-link>
+            <router-link v-else :to="{ name: 'companion' }">Open my saved catalog</router-link>
+            <button v-if="!demo" @click="fileInput?.click()">Import catalog backup</button>
+            <button :disabled="!items.length" @click="exportCatalog">Export catalog backup</button>
+            <a :href="diagnosticUrl">Check phone connection</a>
+            <router-link :to="{ name: 'landingpage' }">Home</router-link>
+            <small>{{ build.channel }} · {{ build.revision.slice(0, 7) }}</small>
+          </nav>
+        </details>
+        <input ref="fileInput" class="file-input" type="file" accept=".json,application/json" aria-label="Import catalog backup file" @change="importCatalog">
       </header>
       <div class="controls panel" @beforexrselect.prevent>
+        <section v-if="showGuide" class="onboarding" aria-label="Getting started">
+          <h1>{{ demo ? 'Explore on your phone' : 'Your designs, within reach' }}</h1>
+          <p>{{ demo ? 'Start with a sample below. Place it in the 3D preview, or enter AR on a supported phone.' : 'Pick an item from your catalog and place it as often as you like. Saved items work without returning to your desktop.' }}</p>
+          <p v-if="demo">Sample designs stay separate from your saved Figma catalog. Screen copying needs a live desktop plugin.</p>
+          <button @click="dismissGuide">Got it</button>
+        </section>
         <p role="status">{{ message }}</p>
         <p v-if="pending" class="pending" aria-live="polite">
           <span class="pending-pulse" aria-hidden="true"></span>{{ pending }}
@@ -96,7 +160,7 @@ onBeforeUnmount(() => {
         </p>
         <p v-if="storageError" role="alert">{{ storageError }}</p>
         <div class="actions">
-          <button v-if="!inXR" class="primary" :disabled="!sceneReady" @click="enterAR">
+          <button v-if="!inXR" class="primary" :disabled="!sceneReady || arAvailable === false" @click="enterAR">
             Enter AR
           </button>
           <button v-else @click="scene?.recalibrate()">
@@ -106,12 +170,15 @@ onBeforeUnmount(() => {
             Cancel {{ pending }} pending {{ pending === 1 ? "copy" : "copies" }}
           </button>
           <button v-if="sceneError" @click="prepareScene">Retry 3D</button>
-          <a v-if="sceneError" href="./phone-check.html">Check phone connection</a>
+          <a v-if="sceneError" :href="diagnosticUrl">Check phone connection</a>
           <button :disabled="!sceneReady" @click="scene?.clear()">Clear placed items</button>
           <button v-if="desktop" @click="bridge.send({ type: 'request-sync' })">
             Refresh catalog
           </button>
+          <button :aria-expanded="showCatalog" aria-controls="catalog-panel" @click="showCatalog = !showCatalog">{{ showCatalog ? 'Hide catalog' : 'Show catalog' }}</button>
         </div>
+        <p v-if="!inXR && arAvailable === false" class="ar-hint">3D preview is available. This browser does not provide AR.</p>
+        <div v-show="showCatalog" id="catalog-panel">
         <label class="search"
           >Catalog · {{ items.length }} items<input
             v-model="query"
@@ -136,6 +203,7 @@ onBeforeUnmount(() => {
               : "Open the Figma XR plugin and scan its pairing QR. Your catalog will appear here and remain available after disconnecting."
           }}
         </p>
+        </div>
       </div>
     </div>
   </div>
@@ -178,6 +246,16 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
 }
+.mode-label { display:block; color:#c3b6ff; font-size:12px; margin-top:4px; }
+.menu { position:relative; flex-shrink:0; }
+.menu summary { cursor:pointer; padding:10px; min-height:44px; box-sizing:border-box; }
+.menu nav { position:absolute; right:0; top:100%; z-index:2; width:min(260px,75vw); max-height:65dvh; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:6px; border:1px solid #475569; background:#0f1726; border-radius:12px; box-shadow:0 8px 30px #0008; }
+.menu nav a, .menu nav button { text-align:left; padding:12px; min-height:44px; box-sizing:border-box; }
+.menu small { color:#acbcd4; padding:8px; overflow-wrap:anywhere; }
+.file-input { display:none; }
+.onboarding { border-bottom:1px solid #334155; padding-bottom:14px; margin-bottom:14px; }
+.onboarding h1 { font-size:20px; margin:0 0 8px; line-height:1.3; }
+.controls .ar-hint { margin:12px 0 0; color:#acbcd4; }
 .top strong {
   font-size: 18px;
 }
@@ -198,6 +276,9 @@ onBeforeUnmount(() => {
   max-width: 820px;
   width: 100%;
   align-self: center;
+  max-height: min(68dvh, 600px);
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 .controls p {
   font-size: 13px;
@@ -217,6 +298,7 @@ button {
   background: #1d2a40;
   color: #fff;
   font-size: 13px;
+  min-height: 44px;
 }
 .primary {
   background: #6560e8;

@@ -21,7 +21,7 @@
       <h1>Figma XR · Phone connection</h1>
       <p>This small page loads without the app or its 3D engine.</p>
       <ul aria-live="polite">
-        <li class="ok">Page: reached the computer over HTTPS.</li>
+        <li class="ok">Page: site reached.</li>
         <li id="javascript">JavaScript: waiting…</li>
         <li id="secure">Secure context: waiting…</li>
         <li id="xr">WebXR: waiting…</li>
@@ -31,7 +31,7 @@
       <p id="result" role="status">Running checks…</p>
       <noscript>JavaScript is disabled. Enable it in your browser and reload.</noscript>
       <p><button onclick="location.reload()">Run again</button></p>
-      <p><a href="./companion">Open companion</a> · To pair, scan the plugin QR again.</p>
+      <p><a href="./companion" id="open-companion">Open companion</a> · To pair, scan the plugin QR again.</p>
     </main>
     <script>
       const show = (id, message, ok) => {
@@ -46,12 +46,21 @@
       show('xr', navigator.xr
         ? 'WebXR: API available (AR support is checked when entering AR).'
         : 'WebXR: API unavailable in this browser. The catalog can still load.', !!navigator.xr);
+      const params = new URLSearchParams(location.search);
+      const requestedRelay = params.get('relay');
+      let relayOrigin;
+      try {
+        const relay = new URL(requestedRelay || location.origin);
+        if (relay.protocol !== 'https:' || relay.username || relay.password || relay.search || relay.hash)
+          throw new Error('Use a plain HTTPS relay address.');
+        relayOrigin = relay.origin;
+      } catch { relayOrigin = null; }
       async function relayCheck() {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 8000);
         try {
           // OPTIONS checks the pairing route/origin without creating a room.
-          const response = await fetch('/api/pair/rooms', {
+          const response = await fetch(new URL('/api/pair/rooms', relayOrigin), {
             method: 'OPTIONS', cache: 'no-store', signal: controller.signal,
           });
           if (response.status !== 204) throw new Error('HTTP ' + response.status);
@@ -77,7 +86,7 @@
           };
           timer = setTimeout(() => finish(false), 8000);
           try {
-            const url = new URL('/api/pair/socket', location.origin);
+            const url = new URL('/api/pair/socket', relayOrigin);
             url.protocol = 'wss:';
             socket = new WebSocket(url);
             socket.onopen = () => finish(true);
@@ -85,7 +94,16 @@
           } catch { finish(false); }
         });
       }
-      Promise.all([relayCheck(), socketCheck()]).then(([relay, socket]) => {
+      if (params.get('mode') === 'demo' || (!requestedRelay && location.hostname.endsWith('.github.io'))) {
+        show('relay', 'Pairing relay: not needed for sample designs.', true);
+        show('socket', 'Live connection: not selected. Open this check from a paired companion to test its relay.', true);
+        document.getElementById('result').textContent = 'The page and browser checks are complete. The mobile lab needs no desktop or relay.';
+        document.getElementById('open-companion').href = './lab';
+      } else if (!relayOrigin) {
+        show('relay', 'Pairing relay: invalid HTTPS address.', false);
+        show('socket', 'Live connection: correct the relay address first.', false);
+        document.getElementById('result').textContent = 'Open this check from the companion menu to use its paired relay.';
+      } else Promise.all([relayCheck(), socketCheck()]).then(([relay, socket]) => {
         document.getElementById('result').textContent = relay && socket
           ? 'The phone can reach the app and relay. Open the companion or scan the plugin QR again. If it still stalls, report the exact text shown there.'
           : 'The page is reachable, but pairing is failing. Report the failed check above.';

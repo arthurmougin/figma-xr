@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "./store/auth.store";
 
 const routes = [
+	{path: "/lab", redirect: { name: "companion", query: { demo: "1" } }},
 	{path: "/companion", name: "companion", component: () => import("./views/CompanionView.vue")},
 	{
 		path: "/",

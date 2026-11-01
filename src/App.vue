@@ -42,7 +42,7 @@ if (!location.pathname.endsWith("/companion")) authStore.checkLogin();
   </Menubar>
   <main class="min-h-dvh">
     <p v-if="authStore.error && route.name !== 'companion'" role="alert" class="relative mt-16 p-4 text-destructive bg-background">{{ authStore.error }}</p>
-    <router-view></router-view>
+    <router-view :key="route.path + ':' + (route.query.demo || '')"></router-view>
   </main>
 </template>
 

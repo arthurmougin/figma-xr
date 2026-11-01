@@ -17,6 +17,12 @@ It works on laptop, smartphone, and even in AR with such smartphone.
 
 ## Plugin companion (no OAuth)
 
+For the desktop-free mobile WIP workflow, start with the
+[remote work guide](docs/remote-work.md). The `/figma-xr/lab` route uses sample
+designs and the companion UI without OAuth, a relay or a desktop. Menu includes
+onboarding and catalog backup/import; production-layout checks run with
+`npm run test:mobile` after building.
+
 The experimental [plugin companion](docs/plugin-companion.md) pairs an open Figma
 file with the phone by QR. It keeps an offline catalog for repeated AR placement
 and adds natural-feature screen picking. Taps register immediately; copying can
@@ -29,8 +35,10 @@ This route needs no Figma API credentials. Physical screen tracking still needs
 device validation; catalog placement works independently of tracking.
 
 For phone testing without installing a development certificate, build the app
-and run `npm run dev:phone` with Cloudflared installed. Paste its two temporary
-HTTPS addresses into the plugin and pair again.
+and run `npm run dev:phone` with Cloudflared installed. The plugin is rebuilt
+with the temporary address; reopen it to prepare the QR automatically. This
+temporary preview needs the local machine to stay on and is separate from the
+desktop-free Pages workflow.
 
 ## Installation and OAuth configuration
 

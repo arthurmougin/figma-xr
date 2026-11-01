@@ -82,7 +82,7 @@ export function createPhonePreview({
       } catch {}
       if (!info?.isFile()) {
         // SPA fallback only for app routes, never for a missing asset/source.
-        if (relative !== "" && relative !== "companion") {
+        if (!["", "companion", "lab"].includes(relative)) {
           respond(404, "Not found");
           return;
         }

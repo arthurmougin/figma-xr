@@ -13,6 +13,7 @@ export class CompanionBridge {
   status = ref("Loading saved catalog…");
   desktop = ref(false);
   storageError = ref("");
+  relay = ref("");
   private socket: WebSocket | null = null;
   private retry: ReturnType<typeof setTimeout> | null = null;
   private ping: ReturnType<typeof setInterval> | null = null;
@@ -53,7 +54,7 @@ export class CompanionBridge {
           description: "Saved Figma plugin assets",
         });
         const saved = await this.db.getItem<CatalogItem[]>(room);
-        if (saved) this.items.value = saved;
+        if (saved && !this.stopped) this.items.value = saved;
       }
     } catch (error) {
       this.storageError.value =
@@ -62,10 +63,33 @@ export class CompanionBridge {
           : "Saved catalog is unavailable.";
     }
     if (this.stopped) return;
+    this.relay.value = this.pair?.relay || "";
     this.status.value = this.pair
       ? "Connecting to plugin…"
       : "Scan the plugin QR to connect. Saved items are ready.";
     if (this.pair) this.connect();
+  }
+  async importCatalog(items: CatalogItem[]) {
+    // Explicitly importing a backup switches away from the live room.
+    this.dispose();
+    this.pair = null;
+    this.relay.value = "";
+    this.items.value = items;
+    this.desktop.value = false;
+    this.snapshot.value = null;
+    this.viewportEpoch.value++;
+    this.status.value = "Saving imported catalog…";
+    try {
+      sessionStorage.removeItem("figma-xr-pair");
+      this.db = localforage.createInstance({ name: "figma-xr-companion", storeName: "catalog" });
+      await this.writes.catch(() => {});
+      await this.db.setItem("portable-catalog", items);
+      localStorage.setItem("figma-xr-last-catalog", "portable-catalog");
+      this.storageError.value = "";
+    } catch {
+      this.storageError.value = "This browser could not save the imported catalog. Keep your backup to import it again.";
+    }
+    this.status.value = "Imported catalog · ready without a desktop";
   }
   private persist() {
     const room = this.pair?.room;
@@ -153,7 +177,7 @@ export class CompanionBridge {
       if (packet.type === "error") this.status.value = packet.message;
     };
     socket.onclose = (event) => {
-      if (socket !== this.socket) return;
+      if (this.stopped || socket !== this.socket) return;
       if (this.ping) clearInterval(this.ping);
       this.ping = null;
       this.desktop.value = false;
@@ -167,6 +191,7 @@ export class CompanionBridge {
         this.retry = setTimeout(() => this.connect(), 2000);
     };
     socket.onerror = () => {
+      if (this.stopped || socket !== this.socket) return;
       this.status.value =
         "Cannot reach the relay. Saved catalog remains ready.";
     };
@@ -179,6 +204,7 @@ export class CompanionBridge {
     this.stopped = true;
     if (this.retry) clearTimeout(this.retry);
     if (this.ping) clearInterval(this.ping);
+    if (this.saveTimer) clearTimeout(this.saveTimer);
     this.socket?.close();
   }
 }

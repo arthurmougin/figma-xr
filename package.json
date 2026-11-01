@@ -15,6 +15,8 @@
     "dev:relay": "node --env-file-if-exists=.env.auth server/index.mjs",
     "build:plugin": "tsc -p plugin/tsconfig.json && tsc -p plugin/tsconfig.ui.json && node scripts/build-plugin.mjs",
     "test:browser": "playwright test",
+    "test:mobile": "playwright test --config playwright.mobile.config.ts",
+    "preview:mobile": "node server/static-preview.mjs",
     "dev:phone": "node server/phone-preview.mjs",
     "predev": "npm run build:plugin"
   },

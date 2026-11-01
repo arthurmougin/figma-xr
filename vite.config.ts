@@ -4,10 +4,24 @@ import { fileURLToPath, URL } from "node:url";
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import { execFileSync } from "node:child_process";
+
+const revision = process.env.GITHUB_SHA || (() => {
+  try { return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(); }
+  catch { return "local"; }
+})();
+const buildInfo = {
+  revision,
+  channel: process.env.GITHUB_REF_NAME || "local",
+  builtAt: new Date().toISOString(),
+};
 
 // https://vitejs.dev/config/
 export default defineConfig({
 	plugins: [
+		{ name: "build-info", generateBundle() {
+			this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify(buildInfo) + "\n" });
+		} },
 		vue(),
 		basicSsl({
 			name: "test",
@@ -34,6 +48,7 @@ export default defineConfig({
 	base: "/figma-xr/",
 	assetsInclude: ["**/**.gltf", "**/**.glb", "**/**.hdri", "**/**.hdr"],
 	define: {
+		__APP_BUILD__: JSON.stringify(buildInfo),
 		__VITE_BASE__: JSON.stringify("/figma-xr"),
 	},
 });

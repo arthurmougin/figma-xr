@@ -7,6 +7,7 @@ import CTA from "../components/CTA.vue";
     <h3 class="text-primary-foreground font-serif text-4xl font-medium">Elevate Your Design Prototyping into the XR
       Realm</h3>
     <CTA></CTA>
+    <router-link :to="{path:'/lab'}" class="mt-4 underline text-primary-foreground">Try the mobile lab · no desktop needed</router-link>
     <router-link :to="{name:'companion'}" class="mt-4 underline text-primary-foreground">Open plugin companion / saved catalog</router-link>
   </article>
   <article id="description" class="h-screen flex flex-col justify-center items-start space-y-4 pl-10">

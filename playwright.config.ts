@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "tests/browser",
+  testIgnore: "mobile-lab.spec.ts",
   workers: 1,
   timeout: 30000,
   use: {

@@ -1,0 +1,12 @@
+FROM node:24-alpine
+WORKDIR /app
+COPY server/package.json server/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+COPY server/index.mjs server/figma-auth.mjs server/pairing.mjs ./server/
+COPY scripts/companion-connection.mjs ./scripts/
+COPY plugin/connection.mjs ./plugin/
+ENV NODE_ENV=production AUTH_HOST=0.0.0.0 PORT=8787
+USER node
+EXPOSE 8787
+HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8787)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "server/index.mjs"]

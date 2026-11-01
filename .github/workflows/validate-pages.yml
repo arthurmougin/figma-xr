@@ -1,0 +1,75 @@
+name: Validate and publish WIP
+
+on:
+  push:
+    branches: ["main", "feat/plugin-companion", "wip/**"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && github.ref || 'pages' }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Build frontend and plugin
+        run: |
+          if [ -n "$PUBLIC_RELAY" ]; then
+            export FIGMA_XR_COMPANION_URL="https://arthurmougin.github.io/figma-xr/"
+            export FIGMA_XR_RELAY_URL="$PUBLIC_RELAY"
+          fi
+          npm run build
+        env:
+          VITE_ID: ${{ secrets.VITE_ID }}
+          VITE_AUTH_API_URL: ${{ vars.VITE_AUTH_API_URL }}
+          PUBLIC_RELAY: ${{ vars.FIGMA_XR_RELAY_URL }}
+      - run: npx playwright install --with-deps chromium
+      - name: Test the built app in phone layouts without a backend
+        run: npm run test:mobile
+      - name: Keep test screenshots and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-test-results
+          path: test-results/
+          retention-days: 7
+      - name: Downloadable development plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: figma-xr-development-plugin
+          path: |
+            plugin/manifest.json
+            plugin/dist/code.js
+            plugin/dist/ui.html
+            plugin/dist/connection.json
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy
