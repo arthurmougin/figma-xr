@@ -1,5 +1,36 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { readdirSync } from "node:fs";
+
+test("the production vision worker initializes without the development server", async ({ page }) => {
+  await page.goto("lab");
+  const workerPath = "/figma-xr/assets/" + readdirSync("dist/assets")
+    .find(name => name.startsWith("tracker.worker-") && name.endsWith(".js"));
+  const count = await page.evaluate(async path => {
+    const worker = new Worker(path, { type: "module" });
+    try {
+      return await new Promise<number>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("Vision worker timed out")), 20_000);
+        worker.onerror = event => { clearTimeout(timeout); reject(new Error(event.message)); };
+        worker.onmessage = event => {
+          if (event.data.type === "reference") { clearTimeout(timeout); resolve(event.data.count); }
+          if (event.data.type === "error") { clearTimeout(timeout); reject(new Error(event.data.message)); }
+        };
+        const canvas = document.createElement("canvas"); canvas.width = 640; canvas.height = 480;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "white"; ctx.fillRect(0, 0, 640, 480);
+        for (let i = 0; i < 150; i++) {
+          ctx.fillStyle = `hsl(${i * 51 % 360} 60% 30%)`;
+          ctx.fillRect(i * 89 % 610, i * 67 % 450, 7 + i % 23, 5 + i % 17);
+        }
+        const pixels = ctx.getImageData(0, 0, 640, 480).data;
+        worker.postMessage({ type: "reference", revision: 1, width: 640, height: 480,
+          originalWidth: 640, originalHeight: 480, pixels: pixels.buffer }, [pixels.buffer]);
+      });
+    } finally { worker.terminate(); }
+  }, workerPath);
+  expect(count).toBeGreaterThan(100);
+});
 
 test("mobile lab supports onboarding, search, placement and backup without any backend", async ({ page }, testInfo) => {
   const backend: string[] = [], errors: string[] = [];

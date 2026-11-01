@@ -45,6 +45,8 @@ export default defineConfig({
 			"@": path.resolve(__dirname, "./src"),
 		},
 	},
+	// Prepare the late-loaded worker dependency without reloading an AR session.
+	optimizeDeps: { include: ["@techstark/opencv-js"] },
 	base: "/figma-xr/",
 	assetsInclude: ["**/**.gltf", "**/**.glb", "**/**.hdri", "**/**.hdr"],
 	define: {
