@@ -9,7 +9,7 @@ Once the WIP source is published and the Pages workflow succeeds:
 - Deployed build identity: <https://arthurmougin.github.io/figma-xr/version.json>
 - Browser checks without a relay: <https://arthurmougin.github.io/figma-xr/phone-check.html?mode=demo>
 
-These are deployment targets, not a claim that the current public site already includes this branch. The feature branch is `feat/plugin-companion`. At preparation time, the latest source was only in the project checkout: automatic approval review blocked its public push pending explicit confirmation to publish source code in the existing public repository. Pages WIP publication itself has been authorized.
+The feature branch is `feat/plugin-companion`. On 2026-11-01 the user explicitly approved public source publication, future WIP updates, and deployment at the existing main Pages URL. Keep the source branch separate from `main`; a WIP deployment replaces the site at the same URL. Verify `version.json` after every successful workflow before claiming a particular build is live.
 
 The sample lab redirects to `companion?demo=1`, using the same controls, onboarding, catalog and Babylon scene as live mode. It generates six original sample cards in the browser and does not read the saved Figma catalog, request OAuth, open a pairing socket or require a desktop. Use it for menu/onboarding, touch layouts, search, placement and AR entry on a supported device. A browser without WebXR can still use the 3D preview. Natural-feature screen copying remains a live-plugin/physical-device test.
 
@@ -86,8 +86,8 @@ Preparation verified on **2026-11-01**, application code revision `ca767b2`:
 | Relay container | Built; health, origin rejection, room creation and socket join passed; temporary test container removed |
 | Visual review | Portrait and landscape preview screenshots checked; non-immersive placement fits the uncovered canvas |
 | GitHub read access | Verified |
-| GitHub source push / branch-write probe | Blocked by automatic approval review before publication; cloud writes remain unverified |
-| GitHub Actions / Pages deployment of this branch | Prepared, not executed while source publication is blocked |
+| GitHub source publication | Explicitly authorized on 2026-11-01; deployment and cloud-write verification follow |
+| GitHub Actions / Pages deployment of this branch | Run the workflow and verify its public revision before reporting success |
 | Permanent hosted relay / physical WebXR | Not verified |
 
 The development vision dependency is now prepared before first use, avoiding the observed Vite reload when OpenCV was first requested. The production worker is checked independently from Vite in the mobile suite. Local frontend and relay services can be stopped after publication; they are not part of the remote lab design.
