@@ -2,7 +2,7 @@
 
 ## Entry points
 
-Once the WIP source is published and the Pages workflow succeeds:
+The WIP is published at the existing main Pages URL. Use:
 
 - Mobile lab: <https://arthurmougin.github.io/figma-xr/lab>
 - Saved/imported catalog: <https://arthurmougin.github.io/figma-xr/companion>
@@ -31,7 +31,7 @@ On the phone, open the saved-catalog companion and use **Menu → Import catalog
 
 GitHub Pages provides one deployment per repository. A successful WIP deployment replaces the site's current build at the same URL. Returning to the `main` build requires deploying that branch again. There is no separate per-PR preview host in this setup.
 
-The repository's `github-pages` environment currently uses custom branch protection. Before the first WIP deployment, add an exact branch policy for `feat/plugin-companion` (and `wip/*` if needed) in **Settings → Environments → github-pages**. This changes which branches may deploy, not repository visibility. The new workflow replaces the old Pages workflow to avoid competing deployments; the obsolete extensionless workflow example is removed.
+The repository's `github-pages` environment uses custom branch protection. An exact deployment policy for `feat/plugin-companion` was added on 2026-11-01 alongside the existing `main` policy. Add `wip/*` only if additional WIP branches need to deploy. This changes which branches may deploy, not repository visibility. The new workflow replaces the old Pages workflow to avoid competing deployments; the obsolete extensionless workflow example is removed.
 
 ## Backend and Figma access
 
@@ -86,13 +86,14 @@ Preparation verified on **2026-11-01**, application code revision `ca767b2`:
 | Relay container | Built; health, origin rejection, room creation and socket join passed; temporary test container removed |
 | Visual review | Portrait and landscape preview screenshots checked; non-immersive placement fits the uncovered canvas |
 | GitHub read access | Verified |
-| GitHub source publication | Explicitly authorized on 2026-11-01; deployment and cloud-write verification follow |
-| GitHub Actions / Pages deployment of this branch | Run the workflow and verify its public revision before reporting success |
+| GitHub editing from ChatGPT | A real file-save attempt returned HTTP 403, Resource not accessible by integration. Cloud editing is blocked until a write-capable connection is available; do not claim the PC-free editing loop is ready |
+| GitHub source publication | Published from the PC; future WIP source updates at the main Pages URL are explicitly authorized |
+| GitHub Actions / Pages deployment of this branch | First cloud build and deployment passed: Actions run 41358068914. Public version.json matched c358edc; public catalog placement passed in Chrome over the internet |
 | Permanent hosted relay / physical WebXR | Not verified |
 
 The development vision dependency is now prepared before first use, avoiding the observed Vite reload when OpenCV was first requested. The production worker is checked independently from Vite in the mobile suite. Local frontend and relay services can be stopped after publication; they are not part of the remote lab design.
 
-Local automated checks cover anonymous pairing, export revisions, worker initialization, tap queuing, the mobile lab without backend calls, import/export and preservation across reload/sample visits. A Pages deployment and a physical phone test must be checked separately after publication. No successful physical screen tracking or hosted OAuth test has been claimed.
+Local automated checks cover anonymous pairing, export revisions, worker initialization, tap queuing, the mobile lab without backend calls, import/export and preservation across reload/sample visits. A public Pages deployment and a Chrome smoke test have passed; physical phone/WebXR acceptance still needs checking. No successful physical screen tracking or hosted OAuth test has been claimed.
 
 Next UI work: one-handed catalog/menu behavior in portrait and landscape; onboarding before camera permission; useful unsupported-AR feedback; entering/exiting XR; placing repeated items; recoverable errors. The lab is an iteration surface, not proof that the live screen tracker is ready.
 
