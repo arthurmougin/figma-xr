@@ -2,7 +2,10 @@ const MAX_ITEMS = 256, MAX_BYTES = 60 * 1024 * 1024;
 export const CATALOG_FILE_MAX_BYTES = MAX_BYTES;
 // Whitelist fields so a backup cannot contain pairing credentials or UI state.
 export function catalogFile(items) {
-  return { format: "figma-xr-catalog", version: 1, items: validate(items) };
+  const file = { format: "figma-xr-catalog", version: 1, items: validate(items) };
+  if (new TextEncoder().encode(JSON.stringify(file)).length > MAX_BYTES)
+    throw new Error("Catalog backups must be under 60 MB.");
+  return file;
 }
 export function parseCatalogFile(text) {
   if (typeof text !== "string" || new TextEncoder().encode(text).length > MAX_BYTES)

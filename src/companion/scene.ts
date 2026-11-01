@@ -473,16 +473,34 @@ export class CompanionScene {
       this.onStatus(`Copied ${item.name} · drag to move, pinch to scale.`);
     }
   }
-  place(item: CatalogItem) {
+  place(item: CatalogItem, preview?: { x: number; y: number; width: number; height: number }) {
     const camera = this.scene.activeCamera!,
-      ray = camera.getForwardRay(0.65),
-      position = ray.origin.add(ray.direction.scale(0.65));
+      ray = camera.getForwardRay(0.65);
+    let position = ray.origin.add(ray.direction.scale(0.65)),
+      width = Math.min(0.35, (0.25 * item.width) / item.height);
+    // In the non-immersive preview, fit the card into the uncovered canvas.
+    // Real AR keeps its metric size and forward placement.
+    const canvas = this.engine.getRenderingCanvas();
+    if (!this.inXR && preview && canvas && preview.width > 0 && preview.height > 0) {
+      const projection = camera.getProjectionMatrix(),
+        renderWidth = this.engine.getRenderWidth(), renderHeight = this.engine.getRenderHeight(),
+        point = Vector3.Unproject(new Vector3(
+          (preview.x + preview.width / 2) / canvas.clientWidth * renderWidth,
+          (preview.y + preview.height / 2) / canvas.clientHeight * renderHeight, 0.5,
+        ), renderWidth, renderHeight, Matrix.Identity(), camera.getViewMatrix(), projection),
+        direction = point.subtract(camera.globalPosition).normalize(),
+        depth = 0.65 * Vector3.Dot(direction, ray.direction);
+      position = camera.globalPosition.add(direction.scale(0.65));
+      width = Math.min(width,
+        1.6 * depth / Math.abs(projection.m[0]) * preview.width / canvas.clientWidth,
+        1.6 * depth / Math.abs(projection.m[5]) * preview.height / canvas.clientHeight * item.width / item.height);
+    }
     if (
       this.spawn(
         item,
         position,
         camera.absoluteRotation.clone(),
-        Math.min(0.35, (0.25 * item.width) / item.height),
+        width,
       )
     )
       this.onStatus(`Placed ${item.name} · drag to move, pinch to scale.`);

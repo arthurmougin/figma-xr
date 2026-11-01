@@ -3,6 +3,7 @@ import { computed, onMounted, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { CompanionBridge } from "../companion/bridge";
 import type { CompanionScene } from "../companion/scene";
+import type { CatalogItem } from "../companion/types";
 import { demoCatalog } from "../companion/demo";
 import { catalogFile, parseCatalogFile, CATALOG_FILE_MAX_BYTES } from "../companion/catalog-file.mjs";
 const demo = useRoute().query.demo === "1";
@@ -13,7 +14,8 @@ const guideKey = `figma-xr-guide-v1-${demo ? "demo" : "live"}`;
 const bridge = new CompanionBridge();
 const { items, status, desktop, storageError } = bridge;
 const canvas = ref<HTMLCanvasElement | null>(null),
-  overlay = ref<HTMLElement | null>(null);
+  overlay = ref<HTMLElement | null>(null),
+  header = ref<HTMLElement | null>(null), controls = ref<HTMLElement | null>(null);
 const inXR = ref(false),
   sceneReady = ref(false),
   sceneError = ref(false),
@@ -33,6 +35,11 @@ const diagnosticUrl = computed(() => import.meta.env.BASE_URL + "phone-check.htm
 function dismissGuide() {
   showGuide.value = false;
   try { localStorage.setItem(guideKey, "done"); } catch { /* Help remains dismissible in memory. */ }
+}
+function place(item: CatalogItem) {
+  const top = header.value?.getBoundingClientRect().bottom || 0,
+    bottom = controls.value?.getBoundingClientRect().top || innerHeight;
+  scene?.place(item, { x: 12, y: top + 12, width: innerWidth - 24, height: bottom - top - 24 });
 }
 function exportCatalog() {
   try {
@@ -122,7 +129,7 @@ onBeforeUnmount(() => {
   <div class="companion">
     <canvas ref="canvas" aria-label="Figma XR scene" />
     <div ref="overlay" class="companion-overlay">
-      <header class="panel top" @beforexrselect.prevent>
+      <header ref="header" class="panel top" @beforexrselect.prevent>
         <div>
           <strong>Figma XR</strong
           ><span class="connection" :class="{ live: desktop }">{{
@@ -145,7 +152,7 @@ onBeforeUnmount(() => {
         </details>
         <input ref="fileInput" class="file-input" type="file" accept=".json,application/json" aria-label="Import catalog backup file" @change="importCatalog">
       </header>
-      <div class="controls panel" @beforexrselect.prevent>
+      <div ref="controls" class="controls panel" @beforexrselect.prevent>
         <section v-if="showGuide" class="onboarding" aria-label="Getting started">
           <h1>{{ demo ? 'Explore on your phone' : 'Your designs, within reach' }}</h1>
           <p>{{ demo ? 'Start with a sample below. Place it in the 3D preview, or enter AR on a supported phone.' : 'Pick an item from your catalog and place it as often as you like. Saved items work without returning to your desktop.' }}</p>
@@ -190,7 +197,7 @@ onBeforeUnmount(() => {
             <button
               :aria-label="'Place ' + item.name"
               :disabled="!sceneReady"
-              @click="scene?.place(item)"
+              @click="place(item)"
             >
               <img :src="item.image" alt="" /><span>{{ item.name }}</span>
             </button>
@@ -368,6 +375,9 @@ button:disabled {
 .empty {
   padding: 8px 0;
   line-height: 1.5;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .controls { max-height: 50dvh; }
 }
 </style>
 
